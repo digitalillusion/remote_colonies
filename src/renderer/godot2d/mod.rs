@@ -1,9 +1,12 @@
 pub mod planet;
 
+use std::rc::Rc;
+
 use gdnative::*;
 
 use planet::Planet;
 use crate::local::starmap::*;
+use crate::local::player::*;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ManageErrs {
@@ -18,8 +21,10 @@ pub enum ManageErrs {
 pub struct Main {
     #[property]
     planet: PackedScene,
+    #[property]
+    ship: PackedScene,
     starmap: Option<Starmap<Node2D>>,
-    players: List<Player<Node2D>>,
+    players: Vec<Player<Node2D>>,
 }
 
 #[methods]
@@ -28,13 +33,15 @@ impl Main {
     fn _init(_owner: Node) -> Self {
         Main {
             planet: PackedScene::new(),
-            starmap: None
+            ship: PackedScene::new(),
+            starmap: None,
+            players: vec!()
         }
     }
     
     #[export]
     unsafe fn _ready(&mut self, mut owner: Node) {
-        let starmap = Starmap::new(10)
+        let mut starmap = Starmap::new(10)
             .with_generator(|id| {
                 let planet_node: Node2D = instance_scene(&self.planet).unwrap();
                 owner.add_child(Some(planet_node.to_node()), false);
@@ -55,20 +62,14 @@ impl Main {
             .build();
         starmap.get_planets_by_max_distance(2, |planet1, planet2| {
             Main::distance_between(planet1, planet2)
-        }).iter().for_each(|planet_node| {
+        }).iter_mut().for_each(|planet_node| {
             let planet_instance = Instance::<Planet>::try_from_unsafe_base(**planet_node).unwrap();
                 planet_instance.map_mut(|planet, _planet_owner| {
                     planet.set_resources(100.0, 1.02);
                 }).unwrap();
 
-            let ship_node: Node2D = instance_scene(&self.planet).unwrap();
-            owner.add_child(Some(planet_node.to_node()), false);
-
-            let planet_instance = Instance::<Planet>::try_from_unsafe_base(planet_node).unwrap();
-            planet_instance.map_mut(|planet, planet_owner| {
-                planet.set_random_features(planet_owner);
-                planet.set_id(id);
-            }).unwrap();
+                let ship_node: Node2D = instance_scene(&self.ship).unwrap();
+                Rc::get_mut(planet_node).unwrap().add_child(Some(ship_node.to_node()), false);
         });
         self.starmap = Some(starmap);
     }

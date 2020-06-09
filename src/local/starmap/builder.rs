@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use gdnative::GodotObject;
 
 use super::Starmap;
@@ -48,7 +50,7 @@ where
         }
     }
     pub fn build(self) -> Starmap<T> {
-        let mut planets: Vec<T> = vec!();
+        let mut planets: Vec<Rc<T>> = vec!();
         let mut planets_invalid_indexes: Vec<usize> = (0..self.count).rev().collect();
 
         let mut generator = self.generator.unwrap();
@@ -58,7 +60,7 @@ where
         while planets.len() < self.count {
             planets_invalid_indexes.reverse();
             for i in &planets_invalid_indexes {
-                let planet = generator(*i);
+                let planet = Rc::new(generator(*i));
                 planets.insert(*i, planet);
             }
 

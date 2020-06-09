@@ -1,14 +1,16 @@
-[gd_scene load_steps=3 format=2]
+[gd_scene load_steps=4 format=2]
 
 [ext_resource path="res://Main.gdns" type="Script" id=1]
 [ext_resource path="res://Planet.tscn" type="PackedScene" id=2]
+[ext_resource path="res://Ship.tscn" type="PackedScene" id=3]
 
 [node name="main" type="Node"]
 script = ExtResource( 1 )
 planet = ExtResource( 2 )
+ship = ExtResource( 3 )
 
 [node name="planet" parent="." instance=ExtResource( 2 )]
 position = Vector2( -47.2815, -47.3493 )
 
-[node name="ship" type="Node2D" parent="."]
-position = Vector2( 75.935, 68.2128 )
+[node name="ship" parent="." instance=ExtResource( 3 )]
+position = Vector2( -0.455109, -11.3759 )

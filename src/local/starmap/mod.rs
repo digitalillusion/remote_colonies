@@ -1,11 +1,13 @@
 pub mod builder;
 
+use std::rc::Rc;
+
 use gdnative::GodotObject;
 
 use builder::StarmapBuilder;
 
 pub struct Starmap<T: GodotObject> {
-    pub planets: Vec<T>
+    pub planets: Vec<Rc<T>>
 }
 
 impl <T: GodotObject> Starmap<T> {
@@ -18,13 +20,15 @@ impl <T: GodotObject> Starmap<T> {
         StarmapBuilder::new(count)
     }   
 
-    pub fn get_planets_by_max_distance<F>(&self, count: usize, distance_fn: F) -> Vec<&T>
+    pub fn get_planets_by_max_distance<F>(&mut self, count: usize, distance_fn: F) -> Vec<Rc<T>>
     where
         F: Fn(&T, &T) -> f32,
     {
         let mut max_distance = 0.0;
         let mut first = 0;
-        let mut planets:Vec<&T> = self.planets.iter().collect();
+        let mut planets:Vec<Rc<T>> = vec!();
+        planets.append(&mut self.planets);
+
         for i in 0..planets.len() {
             for j in i..planets.len() {
                 let distance = distance_fn(&planets[i], &planets[j]);
