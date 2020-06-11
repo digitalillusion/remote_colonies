@@ -8,9 +8,3 @@
 script = ExtResource( 1 )
 planet = ExtResource( 2 )
 ship = ExtResource( 3 )
-
-[node name="planet" parent="." instance=ExtResource( 2 )]
-position = Vector2( -47.2815, -47.3493 )
-
-[node name="ship" parent="." instance=ExtResource( 3 )]
-position = Vector2( -0.455109, -11.3759 )

@@ -1,19 +1,20 @@
 pub mod planet;
-
-use std::rc::Rc;
+pub mod ship;
 
 use gdnative::*;
 
 use planet::Planet;
+use ship::Ship;
+
 use crate::local::starmap::*;
 use crate::local::player::*;
+use crate::local::MainLoop;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ManageErrs {
     CouldNotMakeInstance,
     RootClassInvalid(String),
 }
-
 
 #[derive(NativeClass)]
 #[inherit(Node)]
@@ -23,9 +24,10 @@ pub struct Main {
     planet: PackedScene,
     #[property]
     ship: PackedScene,
-    starmap: Option<Starmap<Node2D>>,
-    players: Vec<Player<Node2D>>,
+
+    main_loop: MainLoop<RigidBody2D, RigidBody2D>,
 }
+
 
 #[methods]
 impl Main {
@@ -34,8 +36,7 @@ impl Main {
         Main {
             planet: PackedScene::new(),
             ship: PackedScene::new(),
-            starmap: None,
-            players: vec!()
+            main_loop: MainLoop::new(),
         }
     }
     
@@ -43,14 +44,13 @@ impl Main {
     unsafe fn _ready(&mut self, mut owner: Node) {
         let mut starmap = Starmap::new(10)
             .with_generator(|id| {
-                let planet_node: Node2D = instance_scene(&self.planet).unwrap();
+                let planet_node: RigidBody2D = instance_scene(&self.planet).unwrap();
                 owner.add_child(Some(planet_node.to_node()), false);
 
-                let planet_instance = Instance::<Planet>::try_from_unsafe_base(planet_node).unwrap();
-                planet_instance.map_mut(|planet, planet_owner| {
-                    planet.set_random_features(planet_owner);
+                Planet::with_mut(planet_node, |planet| {
+                    planet.set_random_features();
                     planet.set_id(id);
-                }).unwrap();
+                });
 
                 planet_node
             })
@@ -60,22 +60,28 @@ impl Main {
             })
             .with_cleaner(|planet| planet.free())
             .build();
+
         starmap.get_planets_by_max_distance(2, |planet1, planet2| {
             Main::distance_between(planet1, planet2)
-        }).iter_mut().for_each(|planet_node| {
-            let planet_instance = Instance::<Planet>::try_from_unsafe_base(**planet_node).unwrap();
-                planet_instance.map_mut(|planet, _planet_owner| {
-                    planet.set_resources(100.0, 1.02);
-                }).unwrap();
+        }).iter().for_each(|planet_node| {
+                let planet_node = **planet_node;
+                let ship_node: RigidBody2D = instance_scene(&self.ship).unwrap();
+                self.main_loop.add_player(Player::new(planet_node, ship_node));
 
-                let ship_node: Node2D = instance_scene(&self.ship).unwrap();
-                Rc::get_mut(planet_node).unwrap().add_child(Some(ship_node.to_node()), false);
+                Planet::with_mut(planet_node, |planet| {
+                    planet.set_resources(100.0, 1.002);
+                    planet.put_in_orbit(&ship_node);
+                    Ship::with(ship_node, |ship| {
+                        ship.orbit(planet);
+                    });
+                });
         });
-        self.starmap = Some(starmap);
+        
+        self.main_loop.set_starmap(starmap);
     }
 
 
-    unsafe fn distance_between(planet1: &Node2D, planet2: &Node2D) -> f32 {
+    unsafe fn distance_between(planet1: &RigidBody2D, planet2: &RigidBody2D) -> f32 {
         let p1pos = Point2::new(planet1.get_position().x, planet1.get_position().y);
         let p2pos = Point2::new(planet2.get_position().x, planet2.get_position().y);
         p1pos.distance_to(p2pos)
