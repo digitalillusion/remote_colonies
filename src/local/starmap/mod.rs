@@ -45,12 +45,11 @@ impl <T: GodotObject> Starmap<T> {
             max_distance = 0.0;
             let mut next = 0;
             for i in 0..planets.len() {
-                let distance = planets_by_max_distance.iter()
+                let distance: f32 = planets_by_max_distance.iter()
                     .map(|planet| {
                         let distance = distance_fn(&planets[i], &planet);
-                        distance.powf(2.0)
-                    })
-                    .product();
+                        distance.sqrt()
+                    }).product();
                 if distance > max_distance {
                     max_distance = distance;
                     next = i;

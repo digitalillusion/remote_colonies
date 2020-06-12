@@ -3,12 +3,12 @@ pub mod ship;
 
 use gdnative::*;
 
-use planet::Planet;
-use ship::Ship;
+use planet::*;
 
 use crate::local::starmap::*;
 use crate::local::player::*;
 use crate::local::MainLoop;
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ManageErrs {
@@ -22,12 +22,9 @@ pub enum ManageErrs {
 pub struct Main {
     #[property]
     planet: PackedScene,
-    #[property]
-    ship: PackedScene,
 
-    main_loop: MainLoop<RigidBody2D, RigidBody2D>,
+    main_loop: MainLoop<Area2D>
 }
-
 
 #[methods]
 impl Main {
@@ -35,60 +32,63 @@ impl Main {
     fn _init(_owner: Node) -> Self {
         Main {
             planet: PackedScene::new(),
-            ship: PackedScene::new(),
-            main_loop: MainLoop::new(),
+            main_loop: MainLoop::new()
         }
     }
     
     #[export]
     unsafe fn _ready(&mut self, mut owner: Node) {
         let mut starmap = Starmap::new(10)
-            .with_generator(|id| {
-                let planet_node: RigidBody2D = instance_scene(&self.planet).unwrap();
-                owner.add_child(Some(planet_node.to_node()), false);
+        .with_generator(|id| {
+            let planet_node: Area2D = instance_scene(&self.planet).unwrap();
+            owner.add_child(Some(planet_node.to_node()), false);
 
-                Planet::with_mut(planet_node, |planet| {
-                    planet.set_random_features();
-                    planet.set_id(id);
+            Planet::with_mut(planet_node, |planet| {
+                planet.set_random_features();
+                planet.set_id(id);
+                planet.set_input_handler(|planet, event| {
+                    let input_event_mouse_button: Option<InputEventMouseButton> = event.cast();
+                    if let Some(event) = input_event_mouse_button {
+                        if event.is_pressed() {
+                            planet.add_ship(10.0);
+                        }
+                    }
                 });
+            });
 
-                planet_node
-            })
-            .with_validator(|planet1, planet2| {
-                let distance = Main::distance_between(planet1, planet2);
-                distance > 100.0 && distance < 800.0
-            })
-            .with_cleaner(|planet| planet.free())
-            .build();
+            planet_node
+        })
+        .with_validator(|planet1, planet2| {
+            let distance = distance_between(planet1, planet2);
+            distance > 100.0 && distance < 800.0
+        })
+        .with_cleaner(|planet| planet.free())
+        .build();
 
-        starmap.get_planets_by_max_distance(2, |planet1, planet2| {
-            Main::distance_between(planet1, planet2)
-        }).iter().for_each(|planet_node| {
-                let planet_node = **planet_node;
-                let ship_node: RigidBody2D = instance_scene(&self.ship).unwrap();
+        starmap.get_planets_by_max_distance(5, |planet1, planet2| {
+            distance_between(planet1, planet2)
+        }).iter()
+        .map(|planet_node| **planet_node)
+        .for_each(|planet_node| {
+            Planet::with_mut(planet_node, |planet| {
+                planet.set_resources(100.0, 0.002);
+                let ship_node = planet.add_ship(0.0).unwrap();
                 self.main_loop.add_player(Player::new(planet_node, ship_node));
-
-                Planet::with_mut(planet_node, |planet| {
-                    planet.set_resources(100.0, 1.002);
-                    planet.put_in_orbit(&ship_node);
-                    Ship::with(ship_node, |ship| {
-                        ship.orbit(planet);
-                    });
-                });
+            });
         });
         
         self.main_loop.set_starmap(starmap);
-    }
-
-
-    unsafe fn distance_between(planet1: &RigidBody2D, planet2: &RigidBody2D) -> f32 {
-        let p1pos = Point2::new(planet1.get_position().x, planet1.get_position().y);
-        let p2pos = Point2::new(planet2.get_position().x, planet2.get_position().y);
-        p1pos.distance_to(p2pos)
+        self.main_loop.run();
     }
 }
 
-unsafe fn instance_scene<Root>(scene: &PackedScene) -> Result<Root, ManageErrs>
+unsafe fn distance_between(planet1: &Area2D, planet2: &Area2D) -> f32 {
+    let p1pos = Point2::new(planet1.get_position().x, planet1.get_position().y);
+    let p2pos = Point2::new(planet2.get_position().x, planet2.get_position().y);
+    p1pos.distance_to(p2pos)
+}
+
+pub unsafe fn instance_scene<Root>(scene: &PackedScene) -> Result<Root, ManageErrs>
 where
     Root: gdnative::GodotObject,
 {

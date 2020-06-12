@@ -1,7 +1,8 @@
-[gd_scene load_steps=6 format=2]
+[gd_scene load_steps=7 format=2]
 
 [ext_resource path="res://Planet.gdns" type="Script" id=1]
 [ext_resource path="res://art/planet.png" type="Texture" id=2]
+[ext_resource path="res://Ship.tscn" type="PackedScene" id=3]
 
 [sub_resource type="CircleShape2D" id=1]
 radius = 11.6283
@@ -13,10 +14,12 @@ font_path = "res://art/pirulen.ttf"
 size = 12
 font_data = SubResource( 2 )
 
-[node name="RigidBody2D" type="RigidBody2D"]
+[node name="Area2D" type="Area2D"]
+position = Vector2( 0, -1 )
 linear_damp = 0.0
 angular_damp = 0.0
 script = ExtResource( 1 )
+ship = ExtResource( 3 )
 
 [node name="Sprite" type="Sprite" parent="."]
 scale = Vector2( 0.350848, 0.34244 )
@@ -47,5 +50,15 @@ __meta__ = {
 [node name="Timer" type="Timer" parent="Orbiters"]
 wait_time = 0.1
 autostart = true
+
+[node name="Control" type="Control" parent="."]
+margin_left = -46.0
+margin_top = -44.0
+margin_right = 47.0
+margin_bottom = 45.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
 [connection signal="timeout" from="Timer" to="." method="on_resource_timer_timeout"]
 [connection signal="timeout" from="Orbiters/Timer" to="." method="on_orbiters_timer_timeout"]
+[connection signal="gui_input" from="Control" to="." method="_on_planet_gui_input"]

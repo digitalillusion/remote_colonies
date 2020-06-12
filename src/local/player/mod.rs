@@ -1,25 +1,16 @@
-
 use gdnative::GodotObject;
 
-pub struct Player<T: GodotObject, S: GodotObject> {
-    planets: Vec<T>,
-    ships: Vec<S>,
+pub struct Player<T: GodotObject> {
+    pub planets: Vec<T>,
+    pub ships: Vec<T>,
 }
 
-impl<T: GodotObject, S: GodotObject> Player<T, S> {
+impl<T: GodotObject> Player<T> {
 
-    pub fn new(planet: T, ship: S) -> Player<T, S> {
+    pub fn new(planet: T, ship: T) -> Player<T> {
         Player {
             planets: vec!(planet),
             ships: vec!(ship),
         }
-    }
-
-    pub fn get_ships(&self) -> &Vec<S> {
-        &self.ships
-    }
-
-    pub fn get_planets(&self) -> &Vec<T> {
-        &self.planets
     }
 }
