@@ -5,7 +5,7 @@
 [ext_resource path="res://Ship.tscn" type="PackedScene" id=3]
 
 [sub_resource type="CircleShape2D" id=1]
-radius = 11.6283
+radius = 11.1133
 
 [sub_resource type="DynamicFontData" id=2]
 font_path = "res://art/pirulen.ttf"
@@ -26,11 +26,9 @@ scale = Vector2( 0.350848, 0.34244 )
 texture = ExtResource( 2 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2( -3.05176e-05, 0 )
 scale = Vector2( 4, 4 )
 shape = SubResource( 1 )
-
-[node name="Timer" type="Timer" parent="."]
-autostart = true
 
 [node name="Label" type="Label" parent="."]
 margin_left = -46.0539
@@ -45,20 +43,14 @@ __meta__ = {
 "_edit_use_anchors_": false
 }
 
-[node name="Orbiters" type="Node2D" parent="."]
+[node name="Timer" type="Timer" parent="."]
+autostart = true
 
-[node name="Timer" type="Timer" parent="Orbiters"]
+[node name="OrbitersTimer" type="Timer" parent="."]
 wait_time = 0.1
 autostart = true
 
-[node name="Control" type="Control" parent="."]
-margin_left = -46.0
-margin_top = -44.0
-margin_right = 47.0
-margin_bottom = 45.0
-__meta__ = {
-"_edit_use_anchors_": false
-}
+[node name="Orbiters" type="Node2D" parent="."]
+[connection signal="input_event" from="." to="." method="_on_planet_gui_input"]
 [connection signal="timeout" from="Timer" to="." method="on_resource_timer_timeout"]
-[connection signal="timeout" from="Orbiters/Timer" to="." method="on_orbiters_timer_timeout"]
-[connection signal="gui_input" from="Control" to="." method="_on_planet_gui_input"]
+[connection signal="timeout" from="OrbitersTimer" to="." method="on_orbiters_timer_timeout"]

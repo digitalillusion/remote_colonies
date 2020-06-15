@@ -1,5 +1,6 @@
 #![feature(clamp)]
 #![feature(vec_remove_item)]
+#![feature(associated_type_bounds)]
 
 //! # `remote_colonies` modules
 //!

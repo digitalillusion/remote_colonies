@@ -3,17 +3,16 @@ use gdnative::*;
 use rand::*;
 
 use std::cell::*;
+use std::rc::Rc;
 
-use crate::local::model::Celestial;
+use crate::local::player::*;
+use crate::local::planet::PlanetBusiness;
+
+use crate::local::model::*;
+use crate::local::MainLoop;
+use crate::local::input::InputHandler;
 use super::instance_scene;
-
-pub struct PlanetProperties {
-    pub owner: Area2D,
-    pub id: usize,
-    pub radius: f32,
-    pub resources: f32,
-    pub resources_increase: f32,
-}
+use super::input::InputHandler2D;
 
 #[derive(NativeClass)]
 #[inherit(Area2D)]
@@ -22,12 +21,18 @@ pub struct Planet {
     #[property]
     ship: PackedScene,
 
-    properties: RefCell<PlanetProperties>,
-    input_handler: Option<Box<dyn Fn(Box<&Planet>, InputEvent) -> ()>>,
+    main_loop: Option<Rc<RefCell<MainLoop<Area2D>>>>,
+    business: PlanetBusiness,
+    owner: RefCell<Area2D>,
+    properties: RefCell<CelestialProperties>,
+    input_handler_fn: Option<Box<dyn Fn(Box<&Planet>, PlayerAction) -> ()>>,
+    input_handler: Option<Rc<RefCell<InputHandler2D>>>,
 }
 
 impl Celestial for Planet {
-    
+    fn properties(&self) -> &RefCell<CelestialProperties> {
+        &self.properties
+    }
 }
 
 #[methods]
@@ -37,17 +42,21 @@ impl Planet {
         let mut rng = rand::thread_rng();
         let resources_initial  = rng.gen_range(10.0, 250.0);
 
-        let properties = PlanetProperties {
-            owner,
+        let properties = CelestialProperties {
             id: 0,
             radius: 0.0,
             resources: resources_initial,
             resources_increase: resources_initial * rng.gen_range(0.0002, 0.005),
+            extracted: 0.0,
         };
         Planet {
             ship: PackedScene::new(),
+            owner: RefCell::new(owner),
             properties: RefCell::new(properties),
-            input_handler: None
+            input_handler_fn: None,
+            input_handler: None,
+            main_loop: None,
+            business: PlanetBusiness::new()
         }
     }
     
@@ -56,16 +65,29 @@ impl Planet {
     }
 
     #[export]
-    pub unsafe fn _on_planet_gui_input(&self, _owner: Area2D, event: InputEvent) {
-        self.input_handler.as_ref().unwrap()(Box::new(self), event);
+    pub unsafe fn _on_planet_gui_input(&self, _owner: Area2D, _viewport: Node, event: InputEvent, _shape_idx: isize) {
+        let target = Box::new(self);
+        let player_action = self.input_handler.as_ref().unwrap().borrow_mut()
+            .convert(*self.properties.borrow(), event);
+        self.input_handler_fn.as_ref().unwrap()(target, player_action);
     }
 
     #[export]
     pub unsafe fn on_resource_timer_timeout(&self, owner: Area2D) {
         let mut props = self.properties.borrow_mut();
-        props.resources += props.resources_increase;
-        
-        let label = &format!("{} - {}", props.id.to_string(), (props.resources as usize).to_string());
+        let planet_orbiters: Node2D = owner
+            .find_node(GodotString::from_str("Orbiters"), false, true)
+            .expect("Unable to find planet/Orbiters")
+            .cast()
+            .expect("Unable to cast to Node2D");
+        let orbiters_count = planet_orbiters.get_children().len();
+        self.business.resources_update(&mut props, orbiters_count);
+
+        let label = &format!("{} - {}/{}", 
+            props.id.to_string(), 
+            (props.resources as usize).to_string(),
+            (props.extracted as usize).to_string()
+        );
         let mut planet_label: Label = owner
             .find_node(GodotString::from_str("Label"), false, true)
             .expect("Unable to find planet/Label")
@@ -85,68 +107,63 @@ impl Planet {
         planet_orbiters.set_global_rotation(rotation - 0.01);
     }
 
-    pub unsafe fn add_ship(&self, resources_cost: f32) -> Option<Area2D> {
+    pub unsafe fn add_ship(&self, resources_cost: f32, player: Option<Rc<Player<Area2D>>>) {
         let mut props = self.properties.borrow_mut();
+        let owner = self.owner.borrow();
 
-        if props.resources - resources_cost < 0.0 {
-            return None
+        if self.business.can_add_ship(&mut props, resources_cost) {
+            let mut ship_node: Area2D = instance_scene(&self.ship).unwrap();
+
+            let mut rng = rand::thread_rng();
+            let angle = rng.gen_range(0.0, 360.0);
+            let position = Vector2::new(props.radius + 5.0, 0.0).rotated(Angle::radians(angle));
+            ship_node.set_global_rotation(angle.into());
+            ship_node.set_position(position);
+            
+            let mut planet_orbiters: Node2D = owner
+                .find_node(GodotString::from_str("Orbiters"), false, true)
+                .expect("Unable to find planet/Orbiters")
+                .cast()
+                .expect("Unable to cast to Node2D");
+            planet_orbiters.add_child(Some(ship_node.to_node()), false);
+            
+            match player {
+                Some(player) => player.add_ship(ship_node),
+                None => {
+                    let player = Player::new(*owner, ship_node);
+                    self.get_main_loop().borrow_mut().players.push(Rc::new(player));
+                }
+            }
         }
-
-        let mut ship_node: Area2D = instance_scene(&self.ship).unwrap();
-
-        let mut rng = rand::thread_rng();
-        let angle = rng.gen_range(0.0, 360.0);
-        let position = Vector2::new(props.radius + 5.0, 0.0).rotated(Angle::radians(angle));
-        ship_node.set_global_rotation(angle.into());
-        ship_node.set_position(position);
-        
-        let mut planet_orbiters: Node2D = props.owner
-            .find_node(GodotString::from_str("Orbiters"), false, true)
-            .expect("Unable to find planet/Orbiters")
-            .cast()
-            .expect("Unable to cast to Node2D");
-        planet_orbiters.add_child(Some(ship_node.to_node()), false);
-        
-        props.resources -= resources_cost;
-        Some(ship_node)
-    }
-
-    pub fn properties(&self) -> &RefCell<PlanetProperties> {
-        &self.properties
     }
 
     pub unsafe fn set_random_features(&self) {
         let mut props = self.properties.borrow_mut();
+        let mut owner = self.owner.borrow_mut();
 
-        let viewport_rect: Rect2 = props.owner.get_viewport_rect();
+        let viewport_rect: Rect2 = owner.get_viewport_rect();
         let viewport_width = viewport_rect.width();
         let viewport_height = viewport_rect.height();
 
         let mut rng = rand::thread_rng();
-        let mut planet_sprite: Sprite = props.owner
+        let mut planet_sprite: Sprite = owner
             .find_node(GodotString::from_str("Sprite"), false, true)
             .expect("Unable to find planet/Shape")
             .cast()
             .expect("Unable to cast to Sprite");
-        let mut planet_collision_shape: CollisionShape2D = props.owner
-            .find_node(GodotString::from_str("CollisionShape2D"), false, true)
-            .expect("Unable to find planet/CollisionShape2D")
-            .cast()
-            .expect("Unable to cast to CollisionShape2D");
         let size = planet_sprite.get_texture()
             .expect("Unable to get Texture")
             .get_width() as f32 * 0.5;
 
         let scale = rng.gen_range(0.2, 1.0) * planet_sprite.get_scale().x;
         let scale_vector = Vector2::new(scale, scale);
-        planet_collision_shape.set_scale(scale_vector);
         planet_sprite.set_scale(scale_vector);
 
         props.radius = scale * size;
         let diameter = 2.0 * props.radius;
         let x_offset = (rng.gen_range(0.0, 1.0) * viewport_width).clamp(diameter, viewport_width - diameter);
         let y_offset = (rng.gen_range(0.0, 1.0) * viewport_height).clamp(diameter, viewport_height - diameter);
-        props.owner.set_position(Vector2::new(x_offset, y_offset));
+        owner.set_position(Vector2::new(x_offset, y_offset));
     }
 
     pub fn set_id(&self, id: usize) {
@@ -154,17 +171,40 @@ impl Planet {
         props.id = id;
     }
 
-    pub fn set_input_handler<F: 'static>(&mut self, input_handler: F) 
+    pub fn get_main_loop(&self) -> &Rc<RefCell<MainLoop<Area2D>>> {
+        &self.main_loop.as_ref().unwrap()
+    }
+
+    pub unsafe fn get_player(&self) -> Option<Rc<Player<Area2D>>> {       
+        for player in &self.get_main_loop().borrow().players {
+            if player.planets.iter()
+                .find(|p| {
+                    Planet::with(**p, |planet| {
+                        planet.properties().borrow().id == self.properties().borrow().id    
+                    })
+                }).is_some() {
+                return Some(player.clone())
+            }
+        }
+        None
+    }
+
+    pub fn set_input_handler<F: 'static>(&mut self, input_handler: Rc<RefCell<InputHandler2D>>, input_handler_fn: F) 
     where 
-        F: Fn(Box<&Planet>, InputEvent) -> ()
+        F: Fn(Box<&Planet>, PlayerAction) -> ()
     {
-        self.input_handler = Some(Box::new(input_handler));
+        self.input_handler = Some(input_handler);
+        self.input_handler_fn = Some(Box::new(input_handler_fn));
+    }
+
+    pub fn set_main_loop(&mut self, main_loop: Rc<RefCell<MainLoop<Area2D>>>) {
+        self.main_loop = Some(main_loop);
     }
 
     pub fn set_resources(&self, initial: f32, inc: f32) {
         let mut props = self.properties.borrow_mut();
-        props.resources = initial;
-        props.resources_increase = initial * inc;
+        
+        self.business.resources_init(&mut props, initial, inc);
     }
 
     pub unsafe fn with_mut<F, T>(node: Area2D, mut with_fn: F) -> T

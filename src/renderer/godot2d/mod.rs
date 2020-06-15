@@ -1,14 +1,18 @@
 pub mod planet;
 pub mod ship;
+mod input;
 
 use gdnative::*;
 
 use planet::*;
 
+use std::cell::*;
+use std::rc::Rc;
+
 use crate::local::starmap::*;
 use crate::local::player::*;
 use crate::local::MainLoop;
-
+use self::input::InputHandler2D;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ManageErrs {
@@ -22,8 +26,6 @@ pub enum ManageErrs {
 pub struct Main {
     #[property]
     planet: PackedScene,
-
-    main_loop: MainLoop<Area2D>
 }
 
 #[methods]
@@ -31,27 +33,28 @@ impl Main {
     
     fn _init(_owner: Node) -> Self {
         Main {
-            planet: PackedScene::new(),
-            main_loop: MainLoop::new()
+            planet: PackedScene::new()
         }
     }
     
     #[export]
     unsafe fn _ready(&mut self, mut owner: Node) {
+        let main_loop = Rc::new(RefCell::new(MainLoop::new()));
+        let input_handler = Rc::new(RefCell::new(InputHandler2D::new()));
         let mut starmap = Starmap::new(10)
         .with_generator(|id| {
             let planet_node: Area2D = instance_scene(&self.planet).unwrap();
             owner.add_child(Some(planet_node.to_node()), false);
 
             Planet::with_mut(planet_node, |planet| {
+                planet.set_main_loop(main_loop.clone());
                 planet.set_random_features();
                 planet.set_id(id);
-                planet.set_input_handler(|planet, event| {
-                    let input_event_mouse_button: Option<InputEventMouseButton> = event.cast();
-                    if let Some(event) = input_event_mouse_button {
-                        if event.is_pressed() {
-                            planet.add_ship(10.0);
-                        }
+                planet.set_input_handler(input_handler.clone(), |planet, player_action| {
+                    match player_action {
+                        PlayerAction::AddShip => planet.add_ship(10.0, planet.get_player()),
+                        PlayerAction::MoveShips(from, to) => godot_print!("{} -> {}", from.id, to.id),
+                        _ => ()
                     }
                 });
             });
@@ -72,13 +75,13 @@ impl Main {
         .for_each(|planet_node| {
             Planet::with_mut(planet_node, |planet| {
                 planet.set_resources(100.0, 0.002);
-                let ship_node = planet.add_ship(0.0).unwrap();
-                self.main_loop.add_player(Player::new(planet_node, ship_node));
+                planet.add_ship(0.0, None);
             });
         });
         
-        self.main_loop.set_starmap(starmap);
-        self.main_loop.run();
+        let mut main_loop = main_loop.borrow_mut();
+        main_loop.set_starmap(starmap);
+        main_loop.run();
     }
 }
 

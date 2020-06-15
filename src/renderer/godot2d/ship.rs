@@ -2,31 +2,32 @@ use gdnative::*;
 
 use std::cell::RefCell;
 
-use crate::local::model::Vessel;
+use crate::local::model::*;
 
-pub struct ShipProperties {
-    pub owner: Area2D
-}
+
 
 #[derive(NativeClass)]
 #[inherit(Area2D)]
 pub struct Ship {
-    properties: RefCell<ShipProperties>
+    // owner: RefCell<Area2D>,
+    properties: RefCell<VesselProperties>
 }
 
 impl Vessel for Ship {
-    
+    fn properties(&self) -> &RefCell<VesselProperties> {
+        &self.properties
+    }
 }
 
 #[methods]
 impl Ship {
     
-    fn _init(owner: Area2D) -> Ship {
-        let ship_properties = ShipProperties {
-            owner
+    fn _init(_owner: Area2D) -> Ship {
+        let properties = VesselProperties {
         };
         Ship {
-            properties: RefCell::new(ship_properties)
+            // owner: RefCell::new(owner),
+            properties: RefCell::new(properties)
         }
     }
     
@@ -34,7 +35,7 @@ impl Ship {
     unsafe fn _ready(&self, _owner: Area2D) {
     }
 
-    pub fn properties(&self) -> &RefCell<ShipProperties> {
+    pub fn properties(&self) -> &RefCell<VesselProperties> {
         &self.properties
     }
 
