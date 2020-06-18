@@ -13,10 +13,6 @@ pub struct InputHandler2D {
 
 impl InputHandler<CelestialProperties> for InputHandler2D {
     fn convert(&mut self, target: CelestialProperties, event: InputEvent) -> PlayerAction {
-        let input_event_mouse_motion: Option<InputEventAction> = event.cast();
-        if let Some(event) = input_event_mouse_motion {
-            godot_print!("{} - {}", target.id, event.as_text());
-        }
         let input_event_mouse_button: Option<InputEventMouseButton> = event.cast();
         if let Some(event) = input_event_mouse_button {
             return self.handle_mouse_button_event(target, event);

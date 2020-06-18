@@ -12,18 +12,20 @@ use self::starmap::Starmap;
 use self::player::*;
 
 
-pub struct MainLoop<T>
+pub struct MainLoop<T,U>
 where 
-    T: GodotObject
+    T: GodotObject,
+    U: GodotObject,
 {
     pub starmap: Option<Starmap<T>>,
-    pub players: Vec<Rc<Player<T>>>
+    pub players: Vec<Rc<Player<T, U>>>
 }
 
-impl <T> MainLoop<T> where 
-    T: GodotObject
+impl <T, U> MainLoop<T, U> where 
+    T: GodotObject,
+    U: GodotObject,
 {
-    pub fn new() -> MainLoop<T> {
+    pub fn new() -> MainLoop<T, U> {
         MainLoop {
             starmap: None,
             players: vec!(),

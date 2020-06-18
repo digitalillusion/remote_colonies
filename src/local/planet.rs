@@ -28,4 +28,8 @@ impl PlanetBusiness {
         }
         false
     }
+
+    pub fn count_ships_to_move(&self, ships_count: usize, percent: usize) -> usize {
+        (ships_count as f32 * percent as f32 / 100.0).floor() as usize
+    }
 }

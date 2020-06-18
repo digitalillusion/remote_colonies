@@ -51,6 +51,7 @@ wait_time = 0.1
 autostart = true
 
 [node name="Orbiters" type="Node2D" parent="."]
+[connection signal="body_entered" from="." to="." method="_on_ship_arrival"]
 [connection signal="input_event" from="." to="." method="_on_planet_gui_input"]
-[connection signal="timeout" from="Timer" to="." method="on_resource_timer_timeout"]
-[connection signal="timeout" from="OrbitersTimer" to="." method="on_orbiters_timer_timeout"]
+[connection signal="timeout" from="Timer" to="." method="_on_resource_timer_timeout"]
+[connection signal="timeout" from="OrbitersTimer" to="." method="_on_orbiters_timer_timeout"]

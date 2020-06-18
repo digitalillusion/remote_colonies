@@ -10,22 +10,24 @@ pub enum PlayerAction {
     None
 }
 
-pub struct Player<T: GodotObject> {
-    pub planets: Vec<T>,
-    pub ships: RefCell<Vec<T>>,
+pub struct Player<T: GodotObject, U: GodotObject> {
+    pub id: usize,
+    pub planets:RefCell<Vec<T>>,
+    pub ships: RefCell<Vec<U>>,
 }
 
 
-impl<T: GodotObject> Player<T> {
+impl<T: GodotObject, U: GodotObject> Player<T, U> {
 
-    pub fn new(planet: T, ship: T) -> Player<T> {
+    pub fn new(id: usize, planet: T, ship: U) -> Player<T, U> {
         Player {
-            planets: vec!(planet),
+            id,
+            planets: RefCell::new(vec!(planet)),
             ships: RefCell::new(vec!(ship)),
         }
     }
 
-    pub fn add_ship(&self, ship: T) {
+    pub fn add_ship(&self, ship: U) {
         self.ships.borrow_mut().push(ship);
     }
 }

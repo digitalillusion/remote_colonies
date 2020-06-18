@@ -2,6 +2,8 @@ use std::cell::RefCell;
 
 #[derive(Debug, Copy, Clone)]
 pub struct VesselProperties {
+    pub id: usize,
+    pub player_id: usize,
 }
 
 pub trait Vessel {

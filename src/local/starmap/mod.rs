@@ -27,7 +27,7 @@ impl <T: GodotObject> Starmap<T> {
         let mut max_distance = 0.0;
         let mut first = 0;
         let mut planets:Vec<Rc<T>> = vec!();
-        planets.append(&mut self.planets);
+        self.planets.iter().for_each(|p| planets.push(p.clone()));
 
         for i in 0..planets.len() {
             for j in i..planets.len() {
