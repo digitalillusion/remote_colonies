@@ -4,7 +4,7 @@ use rand::*;
 
 use std::cell::*;
 use std::rc::Rc;
-use std::f64::consts::FRAC_PI_2;
+
 
 use crate::local::player::*;
 use crate::local::planet::PlanetBusiness;
@@ -18,6 +18,7 @@ use super::input::InputHandler2D;
 
 #[derive(NativeClass)]
 #[inherit(Area2D)]
+
 pub struct Planet {
 
     #[property]
@@ -75,15 +76,17 @@ impl Planet {
     }
 
     #[export]
-    pub unsafe fn _on_ship_arrival(&self, _owner: Area2D, ship_node: Node) {
-        let props = self.properties.borrow_mut();
+    pub unsafe fn _on_ship_arrival(&self, owner: Area2D, ship_node: Node) {
+        let props = self.properties.borrow();
         let mut ship_node: RigidBody2D = ship_node.cast().unwrap();
         if ship_node.get_linear_velocity().length() == 0.0 {
             return;
         }
         ship_node.set_linear_velocity(Vector2::new(0.0, 0.0));
         
-        self.orbit(ship_node, props.radius + 5.0);
+        Ship::with_mut(ship_node, |ship| {
+            ship.orbit(ship_node, owner, props.radius);
+        });
     }
 
     #[export]
@@ -128,8 +131,6 @@ impl Planet {
         if self.business.can_add_ship(&mut props, resources_cost) {
             let ship_node: RigidBody2D = instance_scene(&self.ship).unwrap();
 
-            self.orbit(ship_node, props.radius + 5.0);
-
             let (player_id, ships_count) = match player {
                 Some(player) => {
                     player.add_ship(ship_node);
@@ -143,10 +144,9 @@ impl Planet {
                 }
             };
 
-            godot_print!("PID {}", player_id);
-
             Ship::with_mut(ship_node, |ship| {
                 ship.set_id(player_id, ships_count);
+                ship.orbit(ship_node, *owner, props.radius);
             });
         }
     }
@@ -264,25 +264,5 @@ impl Planet {
         .find(|p| {
             Planet::with(***p, |planet| planet.properties().borrow().id == id)
         }).unwrap()
-    }
-
-    unsafe fn orbit(&self, mut ship_node: RigidBody2D, radius: f32) {
-        let owner = self.owner.borrow();
-
-        let mut rng = rand::thread_rng();
-        let angle = Angle::radians(rng.gen_range(0.0, 360.0));
-        let position = Vector2::new(radius,0.0).rotated(angle);
-        ship_node.set_rotation(3.0 * FRAC_PI_2 + angle.radians as f64);
-        ship_node.set_position(position);
-        
-        let mut planet_orbiters: Node2D = owner
-            .find_node(GodotString::from_str("Orbiters"), false, true)
-            .expect("Unable to find planet/Orbiters")
-            .cast()
-            .expect("Unable to cast to Node2D");
-        if let Some(mut parent) = ship_node.get_parent() {
-            parent.remove_child(Some(ship_node.to_node()));
-        }
-        planet_orbiters.add_child(Some(ship_node.to_node()), false);
     }
 }
