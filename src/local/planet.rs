@@ -1,4 +1,9 @@
+use rand::*;
+
+use std::cell::*;
+
 use super::model::*;
+
 pub struct PlanetBusiness {
 }
 
@@ -31,5 +36,47 @@ impl PlanetBusiness {
 
     pub fn count_ships_to_move(&self, ships_count: usize, percent: usize) -> usize {
         (ships_count as f32 * percent as f32 / 100.0).floor() as usize
+    }
+
+    pub fn battle(&self, ships_by_player: Vec<(Ref<ContenderProperties>, Vec<RefCell<VesselProperties>>)> ) -> (Option<ContenderProperties>, Vec<VesselProperties>) {
+        let total_ship_count = ships_by_player.iter()
+            .map(|(_, ships)| ships.len())
+            .fold(0, |acc, count| acc + count);
+        let ship_loss_probs: Vec<f32> = ships_by_player.iter()
+            .map(|(_player, ships)| {
+                if total_ship_count == 0 {
+                    return 1.0
+                }
+                ships.len() as f32 / total_ship_count as f32
+            })
+            .collect();
+
+        let mut casualties = vec!();
+        let mut rng = rand::thread_rng();
+        ship_loss_probs.iter()
+            .enumerate()
+            .for_each(|(index, prob)| {
+                let dice = rng.gen_range(0.0, 1.0);
+                let ships = &ships_by_player.get(index).unwrap().1;
+                if dice > *prob && ships.len() > 0 {
+                    let rnd_index = rng.gen_range(0.0, ships.len() as f32).floor() as usize;
+                    let ship_propes = *ships.get(rnd_index).unwrap().borrow();
+                    casualties.push(ship_propes);
+                }
+            });
+        
+        let mut winner = None;
+        let remaining_players: Vec<ContenderProperties> = ships_by_player.iter()
+            .filter_map(|(player, ships)| {
+                if ships.len() > 0 {
+                    return Some(**player)
+                }
+                None
+            })
+            .collect();
+        if remaining_players.len() == 1 {
+            winner = Some(*remaining_players.get(0).unwrap());
+        }
+        (winner, casualties)
     }
 }

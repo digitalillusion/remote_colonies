@@ -127,33 +127,74 @@ impl Planet {
 
     #[export]
     pub unsafe fn _process(&self, _owner: Node2D, _delta: f64) {
-        let props = self.properties.borrow();
+        let owner = self.owner.borrow();
         let players = &self.get_main_loop().borrow().players;
-        let mut ships_by_player: Vec<(Ref<ContenderProperties>, Rc<Vec<RigidBody2D>>)> = vec!();
-        players.iter().for_each(|player| {
-            let player_ships = player.ships.borrow();
-            let player_ships_on_planet: Vec<RigidBody2D> = player_ships.iter()
-            .filter_map(|ship_node| {
-                let is_on_planet = Ship::with(*ship_node, |ship| {
-                    ship.properties().borrow().celestial_id == props.id
-                });
-                if is_on_planet  {
-                    return Some(*ship_node)
-                }
-                None
-            })
-            .collect();
-            let tuple = (player.properties().borrow(), Rc::new(player_ships_on_planet));
-            ships_by_player.push(tuple);
-        });
+        let mut ships_by_player: Vec<(Ref<ContenderProperties>, Vec<RefCell<VesselProperties>>)> = vec!();
+        {
+            let props = self.properties.borrow();
+            players.iter().for_each(|player| {
+                let player_ships = player.ships.borrow();
+                let player_ships_on_planet: Vec<RefCell<VesselProperties>> = player_ships.iter()
+                .filter_map(|ship_node| {
+                    Ship::with(*ship_node, |ship| {
+                        if ship.properties().borrow().celestial_id == props.id  {
+                            return Some(ship.properties().clone())
+                        }
+                        None
+                    })
+                })
+                .collect();
+                let tuple = (player.properties().borrow(), player_ships_on_planet);
+                ships_by_player.push(tuple);
+            });
+        }
+
+        let (winner, casualties) = self.business.battle(ships_by_player);
         
-        
-        for (player_props, ships) in ships_by_player {
-            if ships.len() > 0 {
-                //godot_print!("{}: {} -> {}", props.id, player_props.id, ships.len());
-            }
+        for casualty in casualties {
+            if let Some(casualty_player) = players.iter().find(|player| {
+                player.properties().borrow().id == casualty.contender_id
+            }){
+                let mut casualty_player_ships = casualty_player.ships.borrow_mut();
+                let (index, casualty) = casualty_player_ships.iter_mut()
+                    .enumerate()
+                    .find(|(_, ship_node)| {
+                        Ship::with(**ship_node, |ship| {
+                            ship.properties().borrow().id == casualty.id
+                        })
+                    }).unwrap();
+                casualty.free();
+                casualty_player_ships.remove(index);
+            };
         }
         
+        if let Some(winner) = winner {
+            let winner = players.iter().find(|player| {
+                player.properties().borrow().id == winner.id
+            }).unwrap();
+            let winner_props = winner.properties().borrow();
+            if let Some(loser) = players.iter().find(|player| {
+                player.properties().borrow().id == self.properties.borrow().contender_id
+            }) {
+                if loser.properties().borrow().id != winner_props.id {
+                    loser.planets.borrow_mut().retain(|planet| {
+                        Planet::with(*planet, |planet| {
+                            planet.properties().borrow().id != self.properties.borrow().id    
+                        })  
+                    });
+                    self.properties.borrow_mut().contender_id = winner_props.id;
+                    winner.planets.borrow_mut().push(*self.owner.borrow());    
+                }            
+            } else {
+                winner.planets.borrow_mut().push(*self.owner.borrow());   
+            }
+            let mut planet_sprite: Sprite = owner
+                .get_node(NodePath::from_str("Area2D/Sprite"))
+                .expect("Unable to find planet/Area2D/Sprite")
+                .cast()
+                .expect("Unable to cast to Sprite");
+            planet_sprite.set_modulate(winner_props.color);
+        }
     }
 
     pub unsafe fn add_ship(&self, resources_cost: f32, player: &Rc<Player<Node2D, RigidBody2D>>) {
@@ -184,10 +225,10 @@ impl Planet {
         let ships_count = player.clone().ships.borrow().len();
 
         let mut planet_sprite: Sprite = owner
-        .get_node(NodePath::from_str("Area2D/Sprite"))
-        .expect("Unable to find planet/Area2D/Sprite")
-        .cast()
-        .expect("Unable to cast to Sprite");
+            .get_node(NodePath::from_str("Area2D/Sprite"))
+            .expect("Unable to find planet/Area2D/Sprite")
+            .cast()
+            .expect("Unable to cast to Sprite");
         planet_sprite.set_modulate(player.properties().borrow().color);
 
         Ship::with_mut(ship_node, |ship| {
