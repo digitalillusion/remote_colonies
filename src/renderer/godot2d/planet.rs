@@ -47,6 +47,7 @@ impl Planet {
 
         let properties = CelestialProperties {
             id: 0,
+            contender_id: 0,
             radius: 0.0,
             resources: resources_initial,
             resources_increase: resources_initial * rng.gen_range(0.0002, 0.005),
@@ -85,7 +86,7 @@ impl Planet {
         ship_node.set_linear_velocity(Vector2::new(0.0, 0.0));
         
         Ship::with_mut(ship_node, |ship| {
-            ship.orbit(ship_node, owner, props.radius);
+            ship.orbit(ship_node, props.id, owner, props.radius);
         });
     }
 
@@ -124,41 +125,66 @@ impl Planet {
         planet_orbiters.set_global_rotation(rotation - 0.01);
     }
 
-    pub unsafe fn add_ship(&self, resources_cost: f32, player: Option<Rc<Player<Area2D, RigidBody2D>>>) {
+    pub unsafe fn add_ship(&self, resources_cost: f32, player: &Rc<Player<Area2D, RigidBody2D>>) {
         let mut props = self.properties.borrow_mut();
         let owner = self.owner.borrow();
 
-        if self.business.can_add_ship(&mut props, resources_cost) {
+        if self.business.can_add_ship(&mut props, &player.properties().borrow(), resources_cost) {
             let ship_node: RigidBody2D = instance_scene(&self.ship).unwrap();
-
-            let (player_id, ships_count) = match player {
-                Some(player) => {
-                    player.add_ship(ship_node);
-                    (player.id, player.ships.borrow().len())
-                },
-                None => {
-                    let mut main_loop = self.get_main_loop().borrow_mut();
-                    let player = Rc::new(Player::new(main_loop.players.len(), *owner, ship_node));
-                    main_loop.players.push(player.clone());
-                    (player.clone().id, player.clone().ships.borrow().len())
-                }
-            };
+            player.add_ship(ship_node);
+            let ships_count = player.ships.borrow().len();
 
             Ship::with_mut(ship_node, |ship| {
-                ship.set_id(player_id, ships_count);
-                ship.orbit(ship_node, *owner, props.radius);
+                ship.set_id(player, ships_count);
+                ship.orbit(ship_node, props.id, *owner, props.radius);
             });
         }
     }
 
-    pub unsafe fn move_ships(&self, percent: usize, player: Option<Rc<Player<Area2D, RigidBody2D>>>, destination: &Rc<Area2D>) {
-        if player.is_none() {
-            return;
-        }
-        let player = player.unwrap();
-        let mut ships = player.as_ref().ships.borrow_mut();
-        let count: usize =  self.business.count_ships_to_move(ships.len(), percent);
-        let selected_ships = ships.drain(0..count);
+    pub unsafe fn add_player(&self) {
+        let mut props = self.properties.borrow_mut();
+        let owner = self.owner.borrow();
+        let ship_node: RigidBody2D = instance_scene(&self.ship).unwrap();
+        
+        let mut main_loop = self.get_main_loop().borrow_mut();
+        props.contender_id = main_loop.players.len();
+        let player = Rc::new(Player::new(props.contender_id, *owner, ship_node));
+        main_loop.players.push(player.clone());
+        let ships_count = player.clone().ships.borrow().len();
+
+        let mut planet_sprite: Sprite = owner
+        .find_node(GodotString::from_str("Sprite"), false, true)
+        .expect("Unable to find planet/Shape")
+        .cast()
+        .expect("Unable to cast to Sprite");
+        planet_sprite.set_modulate(player.properties().borrow().color);
+
+        Ship::with_mut(ship_node, |ship| {
+            ship.set_id(&player, ships_count);
+            ship.orbit(ship_node, props.id, *owner, props.radius);
+        });
+    }
+
+    pub unsafe fn move_ships(&self, percent: usize, player: &Rc<Player<Area2D, RigidBody2D>>, destination: &Rc<Area2D>) {
+        let owner = self.owner.borrow();
+        let planet_orbiters: Node2D = owner
+            .find_node(GodotString::from_str("Orbiters"), false, true)
+            .expect("Unable to find planet/Orbiters")
+            .cast()
+            .expect("Unable to cast to Node2D");
+        let mut selected_ships: Vec<RigidBody2D> = planet_orbiters.get_children().iter().filter_map(|child| {
+            let child: RigidBody2D = child.try_to_object().unwrap();
+            let is_player_ship = Ship::with(child, |ship| {
+                ship.properties().borrow().contender_id == player.properties().borrow().id
+            });
+            if is_player_ship  {
+                return Some(child)
+            }
+            None
+        })
+        .collect();
+        let count: usize =  self.business.count_ships_to_move(selected_ships.len(), percent);
+        let selected_ships = selected_ships.drain(0..count);
         let mut root_node = self.owner.borrow().get_parent().unwrap();
 
         for mut ship in selected_ships {
@@ -190,7 +216,6 @@ impl Planet {
         let size = planet_sprite.get_texture()
             .expect("Unable to get Texture")
             .get_width() as f32 * 0.5;
-
         let scale = rng.gen_range(0.2, 1.0) * planet_sprite.get_scale().x;
         let scale_vector = Vector2::new(scale, scale);
         planet_sprite.set_scale(scale_vector);

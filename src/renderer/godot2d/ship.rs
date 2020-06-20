@@ -15,6 +15,7 @@ use crate::local::model::*;
 #[derive(NativeClass)]
 #[inherit(RigidBody2D)]
 pub struct Ship {
+    owner: RefCell<RigidBody2D>,
     properties: RefCell<VesselProperties>
 }
 
@@ -27,12 +28,14 @@ impl Vessel for Ship {
 #[methods]
 impl Ship {
     
-    fn _init(_owner: RigidBody2D) -> Ship {
+    fn _init(owner: RigidBody2D) -> Ship {
         let properties = VesselProperties {
             id: 0,
-            player_id: 0,
+            contender_id: 0,
+            celestial_id: 0,
         };
         Ship {
+            owner: RefCell::new(owner),
             properties: RefCell::new(properties)
         }
     }
@@ -54,7 +57,10 @@ impl Ship {
         planet_orbiters.add_child(Some(owner.to_node()), false);
     }
 
-    pub unsafe fn orbit(&self, mut owner: RigidBody2D, planet_node: Area2D, radius: f32) {
+    pub unsafe fn orbit(&self, mut owner: RigidBody2D, celestial_id: usize, planet_node: Area2D, radius: f32) {
+        let mut props = self.properties.borrow_mut();
+        props.celestial_id = celestial_id;
+
         let mut rng = rand::thread_rng();
         let angle = Angle::radians(rng.gen_range(0.0, 360.0));
         let position = Vector2::new(radius + 5.0,0.0).rotated(angle);
@@ -70,7 +76,10 @@ impl Ship {
     pub unsafe fn find_player(&self, players: &Vec<Rc<Player<Area2D, RigidBody2D>>>) -> Option<Rc<Player<Area2D, RigidBody2D>>> {       
         let props = self.properties.borrow();
         let player = players.iter()
-            .find(|p| p.id == props.player_id)
+            .find(|p| {
+                let player_props = p.properties();
+                player_props.borrow().id == props.contender_id
+            })
             .unwrap();
 
         if player.ships.borrow().iter()
@@ -84,10 +93,18 @@ impl Ship {
         None
     }
 
-    pub fn set_id(&self, player_id: usize, id: usize) {
+    pub unsafe fn set_id(&self, player: &Rc<Player<Area2D, RigidBody2D>>, id: usize) {
         let mut props = self.properties.borrow_mut();
-        props.player_id = player_id;
+        let player_props = player.properties().borrow();
+        props.contender_id = player_props.id;
         props.id = id;
+
+        let mut ship_sprite: Sprite = self.owner.borrow()
+        .find_node(GodotString::from_str("Sprite"), false, true)
+        .expect("Unable to find ship/Shape")
+        .cast()
+        .expect("Unable to cast to Sprite");
+        ship_sprite.set_modulate(player_props.color);
     }
 
     pub unsafe fn with_mut<F, T>(node: RigidBody2D, mut with_fn: F) -> T

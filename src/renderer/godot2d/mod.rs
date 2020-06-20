@@ -51,16 +51,16 @@ impl Main {
                 planet.set_random_features();
                 planet.set_id(id);
                 planet.set_input_handler(input_handler.clone(), |planet, player_action| {
+                    let main_loop = &planet.get_main_loop().borrow();
                     match player_action {
-                        PlayerAction::AddShip => planet.add_ship(10.0, planet.get_player()),
+                        PlayerAction::AddShip => planet.add_ship(10.0, main_loop.get_current_player()),
                         PlayerAction::MoveShips(from, to) => {
-                            let main_loop = &planet.get_main_loop().borrow();
                             let planets = &main_loop.starmap.as_ref().unwrap().planets;
                             let planet_from = Planet::get_by_id(planets, from.id);
                             let planet_to = Planet::get_by_id(planets, to.id);
 
                             Planet::with(**planet_from, |planet| {
-                                planet.move_ships(50, planet.get_player(), planet_to);
+                                planet.move_ships(50, main_loop.get_current_player(), planet_to);
                             });
                         },
                         _ => ()
@@ -84,7 +84,7 @@ impl Main {
         .for_each(|planet_node| {
             Planet::with_mut(planet_node, |planet| {
                 planet.set_resources(100.0, 0.002);
-                planet.add_ship(0.0, None);
+                planet.add_player();
             });
         });
         

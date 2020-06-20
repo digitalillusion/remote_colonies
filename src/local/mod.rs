@@ -36,6 +36,10 @@ impl <T, U> MainLoop<T, U> where
         self.starmap = Some(starmap);
     }  
 
+    pub fn get_current_player(&self) -> &Rc<Player<T, U>> {
+        self.players.get(0).unwrap()
+    }
+
     pub fn run(&self) {
         
     }

@@ -21,8 +21,8 @@ impl PlanetBusiness {
         props.resources_increase = initial * inc;
     }
 
-    pub fn can_add_ship(&self, props: &mut CelestialProperties, resources_cost: f32) -> bool {
-        if props.extracted - resources_cost >= 0.0 {
+    pub fn can_add_ship(&self, props: &mut CelestialProperties, contender_props: &ContenderProperties, resources_cost: f32) -> bool {
+        if props.contender_id == contender_props.id && props.extracted - resources_cost >= 0.0 {
             props.extracted -= resources_cost;
             return true
         }
