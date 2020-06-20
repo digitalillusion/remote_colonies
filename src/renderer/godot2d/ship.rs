@@ -45,9 +45,9 @@ impl Ship {
     }
 
     #[export]
-    unsafe fn reparent(&self, owner: RigidBody2D, planet_node: Area2D) {
+    unsafe fn reparent(&self, owner: RigidBody2D, planet_node: Node2D) {
         let mut planet_orbiters: Node2D = planet_node
-            .find_node(GodotString::from_str("Orbiters"), false, true)
+            .get_node(NodePath::from_str("Orbiters"))
             .expect("Unable to find planet/Orbiters")
             .cast()
             .expect("Unable to cast to Node2D");
@@ -57,13 +57,13 @@ impl Ship {
         planet_orbiters.add_child(Some(owner.to_node()), false);
     }
 
-    pub unsafe fn orbit(&self, mut owner: RigidBody2D, celestial_id: usize, planet_node: Area2D, radius: f32) {
+    pub unsafe fn orbit(&self, mut owner: RigidBody2D, celestial_id: usize, planet_node: Node2D, radius: f32) {
         let mut props = self.properties.borrow_mut();
         props.celestial_id = celestial_id;
 
         let mut rng = rand::thread_rng();
         let angle = Angle::radians(rng.gen_range(0.0, 360.0));
-        let position = Vector2::new(radius + 5.0,0.0).rotated(angle);
+        let position = Vector2::new(radius,0.0).rotated(angle);
         owner.set_rotation(3.0 * FRAC_PI_2 + angle.radians as f64);
         owner.set_position(position);
         owner.call_deferred(GodotString::from("reparent"), &[Variant::from(planet_node)]);
@@ -73,7 +73,7 @@ impl Ship {
         &self.properties
     }
 
-    pub unsafe fn find_player(&self, players: &Vec<Rc<Player<Area2D, RigidBody2D>>>) -> Option<Rc<Player<Area2D, RigidBody2D>>> {       
+    pub unsafe fn find_player(&self, players: &Vec<Rc<Player<Node2D, RigidBody2D>>>) -> Option<Rc<Player<Node2D, RigidBody2D>>> {       
         let props = self.properties.borrow();
         let player = players.iter()
             .find(|p| {
@@ -93,14 +93,14 @@ impl Ship {
         None
     }
 
-    pub unsafe fn set_id(&self, player: &Rc<Player<Area2D, RigidBody2D>>, id: usize) {
+    pub unsafe fn set_id(&self, player: &Rc<Player<Node2D, RigidBody2D>>, id: usize) {
         let mut props = self.properties.borrow_mut();
         let player_props = player.properties().borrow();
         props.contender_id = player_props.id;
         props.id = id;
 
         let mut ship_sprite: Sprite = self.owner.borrow()
-        .find_node(GodotString::from_str("Sprite"), false, true)
+        .get_node(NodePath::from_str("Sprite"))
         .expect("Unable to find ship/Shape")
         .cast()
         .expect("Unable to cast to Sprite");

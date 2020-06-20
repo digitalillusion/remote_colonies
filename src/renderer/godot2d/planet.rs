@@ -17,16 +17,16 @@ use super::instance_scene;
 use super::input::InputHandler2D;
 
 #[derive(NativeClass)]
-#[inherit(Area2D)]
+#[inherit(Node2D)]
 
 pub struct Planet {
 
     #[property]
     ship: PackedScene,
 
-    main_loop: Option<Rc<RefCell<MainLoop<Area2D, RigidBody2D>>>>,
+    main_loop: Option<Rc<RefCell<MainLoop<Node2D, RigidBody2D>>>>,
     business: PlanetBusiness,
-    owner: RefCell<Area2D>,
+    owner: RefCell<Node2D>,
     properties: RefCell<CelestialProperties>,
     input_handler_fn: Option<Box<dyn Fn(Box<&Planet>, PlayerAction) -> ()>>,
     input_handler: Option<Rc<RefCell<InputHandler2D>>>,
@@ -41,7 +41,7 @@ impl Celestial for Planet {
 #[methods]
 impl Planet {
     
-    fn _init(owner: Area2D) -> Planet {
+    fn _init(owner: Node2D) -> Planet {
         let mut rng = rand::thread_rng();
         let resources_initial  = rng.gen_range(10.0, 250.0);
 
@@ -65,11 +65,11 @@ impl Planet {
     }
     
     #[export]
-    unsafe fn _ready(&self, _owner: Area2D) {
+    unsafe fn _ready(&self, _owner: Node2D) {
     }
 
     #[export]
-    pub unsafe fn _on_planet_gui_input(&self, _owner: Area2D, _viewport: Node, event: InputEvent, _shape_idx: isize) {
+    pub unsafe fn _on_planet_gui_input(&self, _owner: Node2D, _viewport: Node, event: InputEvent, _shape_idx: isize) {
         let target = Box::new(self);
         let player_action = self.input_handler.as_ref().unwrap().borrow_mut()
             .convert(*self.properties.borrow(), event);
@@ -77,7 +77,7 @@ impl Planet {
     }
 
     #[export]
-    pub unsafe fn _on_ship_arrival(&self, owner: Area2D, ship_node: Node) {
+    pub unsafe fn _on_ship_arrival(&self, owner: Node2D, ship_node: Node) {
         let props = self.properties.borrow();
         let mut ship_node: RigidBody2D = ship_node.cast().unwrap();
         if ship_node.get_linear_velocity().length() == 0.0 {
@@ -91,10 +91,10 @@ impl Planet {
     }
 
     #[export]
-    pub unsafe fn _on_resource_timer_timeout(&self, owner: Area2D) {
+    pub unsafe fn _on_resource_timer_timeout(&self, owner: Node2D) {
         let mut props = self.properties.borrow_mut();
         let planet_orbiters: Node2D = owner
-            .find_node(GodotString::from_str("Orbiters"), false, true)
+            .get_node(NodePath::from_str("Orbiters"))
             .expect("Unable to find planet/Orbiters")
             .cast()
             .expect("Unable to cast to Node2D");
@@ -107,7 +107,7 @@ impl Planet {
             (props.extracted as usize).to_string()
         );
         let mut planet_label: Label = owner
-            .find_node(GodotString::from_str("Label"), false, true)
+            .get_node(NodePath::from_str("Label"))
             .expect("Unable to find planet/Label")
             .cast()
             .expect("Unable to cast to Label");
@@ -115,9 +115,9 @@ impl Planet {
     }
 
     #[export]
-    pub unsafe fn _on_orbiters_timer_timeout(&self, owner: Area2D) {
+    pub unsafe fn _on_orbiters_timer_timeout(&self, owner: Node2D) {
         let mut planet_orbiters: Node2D = owner
-            .find_node(GodotString::from_str("Orbiters"), false, true)
+            .get_node(NodePath::from_str("Orbiters"))
             .expect("Unable to find planet/Orbiters")
             .cast()
             .expect("Unable to cast to Node2D");
@@ -125,7 +125,38 @@ impl Planet {
         planet_orbiters.set_global_rotation(rotation - 0.01);
     }
 
-    pub unsafe fn add_ship(&self, resources_cost: f32, player: &Rc<Player<Area2D, RigidBody2D>>) {
+    #[export]
+    pub unsafe fn _process(&self, _owner: Node2D, _delta: f64) {
+        let props = self.properties.borrow();
+        let players = &self.get_main_loop().borrow().players;
+        let mut ships_by_player: Vec<(Ref<ContenderProperties>, Rc<Vec<RigidBody2D>>)> = vec!();
+        players.iter().for_each(|player| {
+            let player_ships = player.ships.borrow();
+            let player_ships_on_planet: Vec<RigidBody2D> = player_ships.iter()
+            .filter_map(|ship_node| {
+                let is_on_planet = Ship::with(*ship_node, |ship| {
+                    ship.properties().borrow().celestial_id == props.id
+                });
+                if is_on_planet  {
+                    return Some(*ship_node)
+                }
+                None
+            })
+            .collect();
+            let tuple = (player.properties().borrow(), Rc::new(player_ships_on_planet));
+            ships_by_player.push(tuple);
+        });
+        
+        
+        for (player_props, ships) in ships_by_player {
+            if ships.len() > 0 {
+                //godot_print!("{}: {} -> {}", props.id, player_props.id, ships.len());
+            }
+        }
+        
+    }
+
+    pub unsafe fn add_ship(&self, resources_cost: f32, player: &Rc<Player<Node2D, RigidBody2D>>) {
         let mut props = self.properties.borrow_mut();
         let owner = self.owner.borrow();
 
@@ -153,8 +184,8 @@ impl Planet {
         let ships_count = player.clone().ships.borrow().len();
 
         let mut planet_sprite: Sprite = owner
-        .find_node(GodotString::from_str("Sprite"), false, true)
-        .expect("Unable to find planet/Shape")
+        .get_node(NodePath::from_str("Area2D/Sprite"))
+        .expect("Unable to find planet/Area2D/Sprite")
         .cast()
         .expect("Unable to cast to Sprite");
         planet_sprite.set_modulate(player.properties().borrow().color);
@@ -165,10 +196,10 @@ impl Planet {
         });
     }
 
-    pub unsafe fn move_ships(&self, percent: usize, player: &Rc<Player<Area2D, RigidBody2D>>, destination: &Rc<Area2D>) {
+    pub unsafe fn move_ships(&self, percent: usize, player: &Rc<Player<Node2D, RigidBody2D>>, destination: &Rc<Node2D>) {
         let owner = self.owner.borrow();
         let planet_orbiters: Node2D = owner
-            .find_node(GodotString::from_str("Orbiters"), false, true)
+            .get_node(NodePath::from_str("Orbiters"))
             .expect("Unable to find planet/Orbiters")
             .cast()
             .expect("Unable to cast to Node2D");
@@ -208,19 +239,24 @@ impl Planet {
         let viewport_height = viewport_rect.height();
 
         let mut rng = rand::thread_rng();
-        let mut planet_sprite: Sprite = owner
-            .find_node(GodotString::from_str("Sprite"), false, true)
-            .expect("Unable to find planet/Shape")
+        let mut planet_area: Area2D = owner
+            .get_node(NodePath::from_str("Area2D"))
+            .expect("Unable to find planet/Area2D")
+            .cast()
+            .expect("Unable to cast to Area2D");
+        let planet_sprite: Sprite = planet_area
+            .get_node(NodePath::from_str("Sprite"))
+            .expect("Unable to find planet/Area2D/Sprite")
             .cast()
             .expect("Unable to cast to Sprite");
         let size = planet_sprite.get_texture()
             .expect("Unable to get Texture")
             .get_width() as f32 * 0.5;
-        let scale = rng.gen_range(0.2, 1.0) * planet_sprite.get_scale().x;
+        let scale = rng.gen_range(0.5, 2.5) * planet_sprite.get_scale().x;
         let scale_vector = Vector2::new(scale, scale);
-        planet_sprite.set_scale(scale_vector);
+        planet_area.set_scale(scale_vector);
 
-        props.radius = scale * size;
+        props.radius = 0.42 * scale * size;
         let diameter = 2.0 * props.radius;
         let x_offset = (rng.gen_range(0.0, 1.0) * viewport_width).clamp(diameter, viewport_width - diameter);
         let y_offset = (rng.gen_range(0.0, 1.0) * viewport_height).clamp(diameter, viewport_height - diameter);
@@ -232,11 +268,11 @@ impl Planet {
         props.id = id;
     }
 
-    pub fn get_main_loop(&self) -> &Rc<RefCell<MainLoop<Area2D, RigidBody2D>>> {
+    pub fn get_main_loop(&self) -> &Rc<RefCell<MainLoop<Node2D, RigidBody2D>>> {
         &self.main_loop.as_ref().unwrap()
     }
 
-    pub unsafe fn get_player(&self) -> Option<Rc<Player<Area2D, RigidBody2D>>> {       
+    pub unsafe fn get_player(&self) -> Option<Rc<Player<Node2D, RigidBody2D>>> {       
         for player in &self.get_main_loop().borrow().players {
             if player.planets.borrow().iter()
                 .find(|p| {
@@ -258,7 +294,7 @@ impl Planet {
         self.input_handler_fn = Some(Box::new(input_handler_fn));
     }
 
-    pub fn set_main_loop(&mut self, main_loop: Rc<RefCell<MainLoop<Area2D, RigidBody2D>>>) {
+    pub fn set_main_loop(&mut self, main_loop: Rc<RefCell<MainLoop<Node2D, RigidBody2D>>>) {
         self.main_loop = Some(main_loop);
     }
 
@@ -268,7 +304,7 @@ impl Planet {
         self.business.resources_init(&mut props, initial, inc);
     }
 
-    pub unsafe fn with_mut<F, T>(node: Area2D, mut with_fn: F) -> T
+    pub unsafe fn with_mut<F, T>(node: Node2D, mut with_fn: F) -> T
     where
         F: FnMut(&mut Planet) -> T
     {
@@ -276,7 +312,7 @@ impl Planet {
         instance.map_mut(|class, _owner| with_fn(class)).unwrap()
     }
 
-    pub unsafe fn with<F, T>(node: Area2D, with_fn: F) -> T
+    pub unsafe fn with<F, T>(node: Node2D, with_fn: F) -> T
     where
         F: Fn(&Planet) -> T
     {
@@ -284,7 +320,7 @@ impl Planet {
         instance.map(|class, _owner| with_fn(class)).unwrap()
     }
 
-    pub unsafe fn get_by_id(planets: &Vec<Rc<Area2D>>, id: usize) -> &Rc<Area2D> {
+    pub unsafe fn get_by_id(planets: &Vec<Rc<Node2D>>, id: usize) -> &Rc<Node2D> {
         planets.iter()
         .find(|p| {
             Planet::with(***p, |planet| planet.properties().borrow().id == id)

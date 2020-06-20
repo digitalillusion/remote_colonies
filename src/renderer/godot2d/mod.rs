@@ -43,7 +43,7 @@ impl Main {
         let input_handler = Rc::new(RefCell::new(InputHandler2D::new()));
         let mut starmap = Starmap::new(10)
         .with_generator(|id| {
-            let planet_node: Area2D = instance_scene(&self.planet).unwrap();
+            let planet_node: Node2D = instance_scene(&self.planet).unwrap();
             owner.add_child(Some(planet_node.to_node()), false);
 
             Planet::with_mut(planet_node, |planet| {
@@ -72,7 +72,7 @@ impl Main {
         })
         .with_validator(|planet1, planet2| {
             let distance = distance_between(planet1, planet2);
-            distance > 100.0 && distance < 800.0
+            distance > 100.0 && distance < 1000.0
         })
         .with_cleaner(|planet| planet.free())
         .build();
@@ -94,7 +94,7 @@ impl Main {
     }
 }
 
-unsafe fn distance_between(planet1: &Area2D, planet2: &Area2D) -> f32 {
+unsafe fn distance_between(planet1: &Node2D, planet2: &Node2D) -> f32 {
     let p1pos = Point2::new(planet1.get_position().x, planet1.get_position().y);
     let p2pos = Point2::new(planet2.get_position().x, planet2.get_position().y);
     p1pos.distance_to(p2pos)
