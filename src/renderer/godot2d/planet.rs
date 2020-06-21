@@ -80,7 +80,7 @@ impl Planet {
     pub unsafe fn _on_ship_arrival(&self, owner: Node2D, ship_node: Node) {
         let props = self.properties.borrow();
         let mut ship_node: RigidBody2D = ship_node.cast().unwrap();
-        if ship_node.get_linear_velocity().length() == 0.0 {
+        if ship_node.get_linear_velocity().length() == 0.0 || ship_node.get_angle_to(owner.get_global_position()).abs() > 0.002 {
             return;
         }
         ship_node.set_linear_velocity(Vector2::new(0.0, 0.0));
