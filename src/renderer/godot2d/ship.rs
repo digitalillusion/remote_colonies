@@ -6,8 +6,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::f64::consts::FRAC_PI_2;
 
-
-use crate::local::player::*;
+use super::player::Player2D;
 use crate::local::model::*;
 
 
@@ -15,13 +14,13 @@ use crate::local::model::*;
 #[derive(NativeClass)]
 #[inherit(RigidBody2D)]
 pub struct Ship {
-    owner: RefCell<RigidBody2D>,
+    owner: RigidBody2D,
     properties: RefCell<VesselProperties>
 }
 
 impl Vessel for Ship {
-    fn properties(&self) -> &RefCell<VesselProperties> {
-        &self.properties
+    fn properties(&self) -> VesselProperties {
+        *self.properties.borrow()
     }
 }
 
@@ -35,7 +34,7 @@ impl Ship {
             celestial_id: 0,
         };
         Ship {
-            owner: RefCell::new(owner),
+            owner: owner,
             properties: RefCell::new(properties)
         }
     }
@@ -69,23 +68,19 @@ impl Ship {
         owner.call_deferred(GodotString::from("reparent"), &[Variant::from(planet_node)]);
     }
 
-    pub fn properties(&self) -> &RefCell<VesselProperties> {
-        &self.properties
-    }
-
-    pub unsafe fn find_player(&self, players: &Vec<Rc<Player<Node2D, RigidBody2D>>>) -> Option<Rc<Player<Node2D, RigidBody2D>>> {       
-        let props = self.properties.borrow();
+    pub unsafe fn find_player(&self, players: &Vec<Rc<Player2D>>) -> Option<Rc<Player2D>> {       
+        let props = self.properties();
         let player = players.iter()
             .find(|p| {
                 let player_props = p.properties();
-                player_props.borrow().id == props.contender_id
+                player_props.id == props.contender_id
             })
             .unwrap();
 
         if player.ships.borrow().iter()
             .find(|s| {
                 Ship::with(**s, |ship| {
-                    ship.properties().borrow().id == props.id    
+                    ship.properties().id == props.id    
                 })
             }).is_some() {
             return Some(player.clone())
@@ -93,17 +88,16 @@ impl Ship {
         None
     }
 
-    pub unsafe fn set_id(&self, player: &Rc<Player<Node2D, RigidBody2D>>, id: usize) {
+    pub unsafe fn set_id(&self, player_props: ContenderProperties, id: usize) {
         let mut props = self.properties.borrow_mut();
-        let player_props = player.properties().borrow();
         props.contender_id = player_props.id;
         props.id = id;
 
-        let mut ship_sprite: Sprite = self.owner.borrow()
-        .get_node(NodePath::from_str("Sprite"))
-        .expect("Unable to find ship/Shape")
-        .cast()
-        .expect("Unable to cast to Sprite");
+        let mut ship_sprite: Sprite = self.owner
+            .get_node(NodePath::from_str("Sprite"))
+            .expect("Unable to find ship/Shape")
+            .cast()
+            .expect("Unable to cast to Sprite");
         ship_sprite.set_modulate(player_props.color);
     }
 

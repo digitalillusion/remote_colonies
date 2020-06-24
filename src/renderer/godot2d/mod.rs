@@ -1,6 +1,7 @@
 pub mod planet;
 pub mod ship;
 mod input;
+mod player;
 
 use gdnative::*;
 
@@ -51,7 +52,7 @@ impl Main {
                 planet.set_random_features();
                 planet.set_id(id);
                 planet.set_input_handler(input_handler.clone(), |planet, player_action| {
-                    let main_loop = &planet.get_main_loop().borrow();
+                    let main_loop = planet.get_main_loop();
                     match player_action {
                         PlayerAction::AddShip => planet.add_ship(10.0, main_loop.get_current_player()),
                         PlayerAction::MoveShips(from, to) => {

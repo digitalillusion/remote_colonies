@@ -1,7 +1,5 @@
 use gdnative::Color;
 
-use std::cell::RefCell;
-
 #[derive(Debug, Copy, Clone)]
 pub struct ContenderProperties {
     pub id: usize,
@@ -9,7 +7,7 @@ pub struct ContenderProperties {
 }
 
 pub trait Contender {
-    fn properties(&self) -> &RefCell<ContenderProperties>;
+    fn properties(&self) -> ContenderProperties;
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -20,7 +18,7 @@ pub struct VesselProperties {
 }
 
 pub trait Vessel {
-    fn properties(&self) -> &RefCell<VesselProperties>;
+    fn properties(&self) -> VesselProperties;
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -34,6 +32,6 @@ pub struct CelestialProperties {
 }
 
 pub trait Celestial {
-    fn properties(&self) -> &RefCell<CelestialProperties>;
+    fn properties(&self) -> CelestialProperties;
 
 }

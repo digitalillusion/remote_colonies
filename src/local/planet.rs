@@ -1,7 +1,5 @@
 use rand::*;
 
-use std::cell::*;
-
 use super::model::*;
 
 pub struct PlanetBusiness {
@@ -26,7 +24,7 @@ impl PlanetBusiness {
         props.resources_increase = initial * inc;
     }
 
-    pub fn can_add_ship(&self, props: &mut CelestialProperties, contender_props: &ContenderProperties, resources_cost: f32) -> bool {
+    pub fn can_add_ship(&self, props: &mut CelestialProperties, contender_props: ContenderProperties, resources_cost: f32) -> bool {
         if props.contender_id == contender_props.id && props.extracted - resources_cost >= 0.0 {
             props.extracted -= resources_cost;
             return true
@@ -38,7 +36,7 @@ impl PlanetBusiness {
         (ships_count as f32 * percent as f32 / 100.0).floor() as usize
     }
 
-    pub fn battle(&self, ships_by_player: Vec<(Ref<ContenderProperties>, Vec<RefCell<VesselProperties>>)> ) -> (Option<ContenderProperties>, Vec<VesselProperties>) {
+    pub fn battle(&self, ships_by_player: Vec<(ContenderProperties, Vec<VesselProperties>)> ) -> (Option<ContenderProperties>, Vec<VesselProperties>) {
         let total_ship_count = ships_by_player.iter()
             .map(|(_, ships)| ships.len())
             .fold(0, |acc, count| acc + count);
@@ -60,8 +58,8 @@ impl PlanetBusiness {
                 let ships = &ships_by_player.get(index).unwrap().1;
                 if dice > *prob && ships.len() > 0 {
                     let rnd_index = rng.gen_range(0.0, ships.len() as f32).floor() as usize;
-                    let ship_propes = *ships.get(rnd_index).unwrap().borrow();
-                    casualties.push(ship_propes);
+                    let ship_props = *ships.get(rnd_index).unwrap();
+                    casualties.push(ship_props);
                 }
             });
         
@@ -69,7 +67,7 @@ impl PlanetBusiness {
         let remaining_players: Vec<ContenderProperties> = ships_by_player.iter()
             .filter_map(|(player, ships)| {
                 if ships.len() > 0 {
-                    return Some(**player)
+                    return Some(*player)
                 }
                 None
             })
