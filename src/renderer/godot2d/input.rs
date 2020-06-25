@@ -18,7 +18,7 @@ impl InputHandler<CelestialProperties> for InputHandler2D {
             return self.handle_mouse_button_event(target, event);
         }
 
-        PlayerAction::None
+        PlayerAction::Wait
     }
 }
 
@@ -32,7 +32,7 @@ impl InputHandler2D {
     }
 
     fn handle_mouse_button_event(&mut self, target: CelestialProperties, event: InputEventMouseButton) -> PlayerAction {
-        let mut player_action = PlayerAction::None;
+        let mut player_action = PlayerAction::Wait;
         match event.get_button_index() {
             1 =>  {
                 if event.is_pressed() {
@@ -40,7 +40,7 @@ impl InputHandler2D {
                 } else {
                     let duration = SystemTime::now().duration_since(self.primary_mouse_button_time).unwrap();
                     if duration.as_millis() < 500 {
-                        player_action = PlayerAction::AddShip;
+                        player_action = PlayerAction::AddShip(target);
                     } else if self.target_planet.is_some() {
                         let current = self.target_planet.unwrap();
                         if current.id != target.id {

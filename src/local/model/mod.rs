@@ -1,9 +1,19 @@
 use gdnative::Color;
 
+pub struct Consts {}
+
+impl Consts {
+    pub const ADD_PLAYER_RESOURCES_INIT: f32 = 100.0;
+    pub const ADD_PLAYER_RESOURCES_INC: f32 = 0.002;
+    pub const ADD_SHIP_RESOURCE_COST: f32 = 10.0;
+    pub const MOVE_SHIP_FLEET_PERCENT: usize = 50;
+}
+
 #[derive(Debug, Copy, Clone)]
 pub struct ContenderProperties {
     pub id: usize,
-    pub color: Color
+    pub color: Color,
+    pub bot: bool
 }
 
 pub trait Contender {

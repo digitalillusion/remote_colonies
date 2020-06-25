@@ -10,7 +10,7 @@ use crate::local::planet::PlanetBusiness;
 use crate::renderer::godot2d::ship::Ship;
 
 use crate::local::model::*;
-use crate::local::MainLoop;
+use crate::local::GameState;
 use crate::local::input::InputHandler;
 use super::instance_scene;
 use super::input::InputHandler2D;
@@ -25,7 +25,7 @@ pub struct Planet {
     #[property]
     ship: PackedScene,
 
-    main_loop: Option<Rc<RefCell<MainLoop<Starmap2D, Player2D>>>>,
+    game_state: Option<Rc<RefCell<GameState<Starmap2D, Player2D>>>>,
     business: PlanetBusiness,
     owner: Node2D,
     properties: RefCell<CelestialProperties>,
@@ -60,7 +60,7 @@ impl Planet {
             properties: RefCell::new(properties),
             input_handler_fn: None,
             input_handler: None,
-            main_loop: None,
+            game_state: None,
             business: PlanetBusiness::new()
         }
     }
@@ -129,10 +129,10 @@ impl Planet {
     #[export]
     pub unsafe fn _process(&self, _owner: Node2D, _delta: f64) {
         let owner = self.owner;
-        let main_loop = self.get_main_loop();
-        let players = &main_loop.players;
+        let game_state = self.get_game_state();
+        let players = game_state.get_players();
 
-        let ships_by_player = main_loop.get_ships_by_player(self.properties());
+        let ships_by_player = game_state.get_ships_by_player(self.properties());
         let (winner, casualties) = self.business.battle(ships_by_player);
         
         for casualty in casualties {
@@ -197,14 +197,14 @@ impl Planet {
         }
     }
 
-    pub unsafe fn add_player(&self) {
+    pub unsafe fn add_player(&self, is_bot: bool) {
         let mut props = self.properties.borrow_mut();
         let owner = self.owner;
         let ship_node: RigidBody2D = instance_scene(&self.ship).unwrap();
         
-        let mut main_loop = self.main_loop.as_ref().unwrap().borrow_mut();
-        props.contender_id = main_loop.players.len();
-        let player: Player2D = Player::new(props.contender_id, owner, ship_node);
+        let mut game_state = self.game_state.as_ref().unwrap().borrow_mut();
+        props.contender_id = game_state.get_players().len();
+        let player = Player2D::new(props.contender_id, owner, ship_node, is_bot);
         let ships_count = player.ships.borrow().len();
         let mut planet_sprite: Sprite = owner
             .get_node(NodePath::from_str("Area2D/Sprite"))
@@ -218,7 +218,7 @@ impl Planet {
             ship.orbit(ship_node, props.id, owner, props.radius);
         });
 
-        main_loop.players.push(Rc::new(player));
+        game_state.add_player(Rc::new(player));
     }
 
     pub unsafe fn move_ships(&self, percent: usize, player: &Player2D, destination: &Rc<Node2D>) {
@@ -293,8 +293,8 @@ impl Planet {
         props.id = id;
     }
 
-    pub fn get_main_loop(&self) -> Ref<MainLoop<Starmap2D, Player2D>> {
-        self.main_loop.as_ref().unwrap().borrow()
+    pub fn get_game_state(&self) -> Ref<GameState<Starmap2D, Player2D>> {
+        self.game_state.as_ref().unwrap().borrow()
     }
 
     pub fn set_input_handler<F: 'static>(&mut self, input_handler: Rc<RefCell<InputHandler2D>>, input_handler_fn: F) 
@@ -305,8 +305,8 @@ impl Planet {
         self.input_handler_fn = Some(Box::new(input_handler_fn));
     }
 
-    pub fn set_main_loop(&mut self, main_loop: Rc<RefCell<MainLoop<Starmap2D, Player2D>>>) {
-        self.main_loop = Some(main_loop);
+    pub fn set_game_state(&mut self, game_state: Rc<RefCell<GameState<Starmap2D, Player2D>>>) {
+        self.game_state = Some(game_state);
     }
 
     pub fn set_resources(&self, initial: f32, inc: f32) {

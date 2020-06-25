@@ -13,9 +13,11 @@ use std::rc::Rc;
 
 use crate::local::starmap::*;
 use crate::local::player::*;
-use crate::local::MainLoop;
+use crate::local::GameState;
+use crate::local::model::*;
 use self::input::InputHandler2D;
 use self::starmap::Starmap2D;
+use self::player::Player2D;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ManageErrs {
@@ -29,6 +31,8 @@ pub enum ManageErrs {
 pub struct Main {
     #[property]
     planet: PackedScene,
+
+    game_state: Rc<RefCell<GameState<Starmap2D, Player2D>>>
 }
 
 #[methods]
@@ -36,13 +40,13 @@ impl Main {
     
     fn _init(_owner: Node) -> Self {
         Main {
-            planet: PackedScene::new()
+            planet: PackedScene::new(),
+            game_state: Rc::new(RefCell::new(GameState::new())),
         }
     }
     
     #[export]
     unsafe fn _ready(&mut self, mut owner: Node) {
-        let main_loop = Rc::new(RefCell::new(MainLoop::new()));
         let input_handler = Rc::new(RefCell::new(InputHandler2D::new()));
         let mut starmap = Starmap2D::new(10)
         .with_generator(|id| {
@@ -50,20 +54,20 @@ impl Main {
             owner.add_child(Some(planet_node.to_node()), false);
 
             Planet::with_mut(planet_node, |planet| {
-                planet.set_main_loop(main_loop.clone());
+                planet.set_game_state(self.game_state.clone());
                 planet.set_random_features();
                 planet.set_id(id);
                 planet.set_input_handler(input_handler.clone(), |planet, player_action| {
-                    let main_loop = planet.get_main_loop();
+                    let game_state = planet.get_game_state();
                     match player_action {
-                        PlayerAction::AddShip => planet.add_ship(10.0, main_loop.get_current_player()),
+                        PlayerAction::AddShip(_) => planet.add_ship(Consts::ADD_SHIP_RESOURCE_COST, game_state.get_current_player()),
                         PlayerAction::MoveShips(from, to) => {
-                            let planets = &main_loop.starmap.as_ref().unwrap().get_planets();
+                            let planets = game_state.get_starmap().get_planets();
                             let planet_from = Planet::get_by_id(planets, from.id);
                             let planet_to = Planet::get_by_id(planets, to.id);
 
                             Planet::with(**planet_from, |planet| {
-                                planet.move_ships(50, main_loop.get_current_player(), planet_to);
+                                planet.move_ships(Consts::MOVE_SHIP_FLEET_PERCENT, game_state.get_current_player(), planet_to);
                             });
                         },
                         _ => ()
@@ -80,18 +84,23 @@ impl Main {
         .with_cleaner(|planet| planet.free())
         .build();
 
-        starmap.get_planets_by_max_distance(5).iter()
+        starmap.get_planets_by_max_distance(2).iter()
         .map(|planet_node| **planet_node)
-        .for_each(|planet_node| {
+        .enumerate()
+        .for_each(|(index, planet_node)| {
             Planet::with_mut(planet_node, |planet| {
-                planet.set_resources(100.0, 0.002);
-                planet.add_player();
+                planet.set_resources(Consts::ADD_PLAYER_RESOURCES_INIT, Consts::ADD_PLAYER_RESOURCES_INC);
+                planet.add_player(index > 0);
             });
         });
         
-        let mut main_loop = main_loop.borrow_mut();
-        main_loop.set_starmap(starmap);
-        main_loop.run();
+        let mut game_state = self.game_state.borrow_mut();
+        game_state.set_starmap(starmap);
+    }
+
+    #[export]
+    pub unsafe fn _process(&self, _owner: Node, _delta: f64) {
+        self.game_state.borrow_mut().update_ai();
     }
 }
 

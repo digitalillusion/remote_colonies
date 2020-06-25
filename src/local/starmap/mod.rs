@@ -3,11 +3,14 @@ pub mod builder;
 use std::rc::Rc;
 
 use builder::StarmapBuilder;
+use super::model::CelestialProperties;
 
 pub trait Starmap {
     type CelestialType;
 
     fn get_planets(&self) -> &Vec<Rc<Self::CelestialType>>;
+
+    unsafe fn get_planet_properties(&self, planet_id: usize) -> CelestialProperties;
 
     fn set_planets(&mut self, planets: Vec<Rc<Self::CelestialType>>);
 

@@ -3,7 +3,9 @@ use gdnative::*;
 use std::rc::Rc;
 
 
+use super::planet::Planet;
 use crate::local::starmap::*;
+use crate::local::model::*;
 use crate::local::starmap::builder::StarmapBuilder;
 
 
@@ -16,6 +18,13 @@ impl Starmap for Starmap2D {
 
     fn get_planets(&self) -> &Vec<Rc<Node2D>> {
         &self.planets
+    }
+    
+    unsafe fn get_planet_properties(&self, planet_id: usize) -> CelestialProperties {
+        let planet_node = **self.planets.get(planet_id).unwrap();
+        Planet::with(planet_node, |planet| {
+            planet.properties()
+        })
     }
 
     fn set_planets(&mut self, planets: Vec<Rc<Node2D>>) {
