@@ -1,4 +1,7 @@
+mod mcst;
+
 use mcts::*;
+use mcts::tree_policy::UCTPolicy;
 use mcts::transposition_table::*;
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
@@ -6,6 +9,7 @@ use std::collections::hash_map::DefaultHasher;
 use super::planet::PlanetBusiness;
 use super::model::*;
 use super::player::*;
+use self::mcst::*;
 
 #[derive(Clone, Debug)]
 struct Measure {
@@ -17,8 +21,14 @@ struct Measure {
 
 #[derive(Clone, Debug, Hash)]
 struct Metrics {
-    resources: usize,
-    ships_count: usize,
+    resources: i64,
+    ships_count: i64,
+}
+
+impl Metrics {
+    pub fn evaluate(&self) -> i64 {
+        self.resources * self.ships_count * self.ships_count
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -40,6 +50,16 @@ impl AiState {
             },
             measures: vec!()
         }
+    }
+
+    pub fn get_player(&self) -> ContenderProperties {
+        self.player
+    }
+
+    pub fn get_best_move(&self) -> PlayerAction {
+        let mut mcts = MCTSManager::new(self.clone(), MyMCTS, MyEvaluator, UCTPolicy::new(0.5), ApproxTable::new(1024));
+        mcts.playout_n_parallel(10000, 4);
+        mcts.best_move().unwrap()
     }
 
     pub fn refresh_measures(&mut self, ships_by_player_by_planet: Vec<(CelestialProperties, Vec<(ContenderProperties, Vec<VesselProperties>)>)>) {
@@ -77,12 +97,18 @@ impl AiState {
             .unwrap();
         allied_ships.drain(0..count)
             .for_each(|allied_ship| allied_ships_on_planet.push(allied_ship));
+        let count_allied_ships_on_planet = allied_ships_on_planet.len();
 
-        let (_, casualties) = planet_business.battle(to.ships_by_player.to_vec());
+        let (winner, casualties) = planet_business.battle(to.ships_by_player.to_vec());
         from.ships_count -= count;
-        to.ships_count += count - casualties.iter()
+        to.ships_count = count_allied_ships_on_planet - casualties.iter()
             .filter(|c| c.contender_id == self.player.id)
             .count();
+        if let Some(winner) = winner {
+            if winner.id == self.player.id {
+                to.planet_props.contender_id = winner.id
+            }
+        }
     }
 }
 
@@ -97,10 +123,10 @@ impl GameState for AiState {
     fn available_moves(&self) -> Vec<PlayerAction> {
         let mut moves = vec![PlayerAction::Wait];
         let allied_planets: Vec<&Measure> = self.measures.iter()
-            .filter(|m| m.planet_props.id == self.player.id)
+            .filter(|m| m.planet_props.contender_id == self.player.id)
             .collect();
         let enemy_planets: Vec<&Measure> = self.measures.iter()
-            .filter(|m| m.planet_props.id != self.player.id)
+            .filter(|m| m.planet_props.contender_id != self.player.id)
             .collect();
 
         allied_planets.iter()
@@ -113,6 +139,7 @@ impl GameState for AiState {
                 moves.push(PlayerAction::MoveShips(allied_planets[i].planet_props, enemy_planets[j].planet_props));
             }
         }
+
         moves
     }
     fn make_move(&mut self, mov: &Self::Move) {
@@ -136,13 +163,16 @@ impl GameState for AiState {
             PlayerAction::Wait => ()
         }
 
+        let allied_measures: Vec<&Measure> = self.measures.iter()
+            .filter(|m| m.planet_props.contender_id == self.player.id)
+            .collect();
         self.metrics = Metrics {
-            resources: self.measures.iter()
+            resources: allied_measures.iter()
                 .map(|m| m.resources)
-                .fold(0, |acc, r| acc + r.floor() as usize),
-            ships_count: self.measures.iter()
+                .fold(0, |acc, r| acc + r.floor() as i64),
+            ships_count: allied_measures.iter()
                 .map(|m| m.ships_count)
-                .fold(0, |acc, s| acc + s),
+                .fold(0, |acc, s| acc + s as i64),
         }
     }
 

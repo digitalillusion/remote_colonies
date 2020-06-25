@@ -25,10 +25,10 @@ impl Player for Player2D {
     type CelestialType = Node2D;
     type VesselType = RigidBody2D;
 
-    fn new(id: usize, planet: Node2D, ship: RigidBody2D, bot: bool) -> Self {
+    fn new(id: isize, planet: Node2D, ship: RigidBody2D, bot: bool) -> Self {
         let properties = ContenderProperties {
             id,
-            color: get_color(id),
+            color: get_color(id as usize),
             bot
         };
         Player2D {

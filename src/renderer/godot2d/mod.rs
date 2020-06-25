@@ -32,7 +32,7 @@ pub struct Main {
     #[property]
     planet: PackedScene,
 
-    game_state: Rc<RefCell<GameState<Starmap2D, Player2D>>>
+    game_state: Rc<RefCell<GameState<Starmap2D, Player2D>>>,
 }
 
 #[methods]
@@ -59,19 +59,9 @@ impl Main {
                 planet.set_id(id);
                 planet.set_input_handler(input_handler.clone(), |planet, player_action| {
                     let game_state = planet.get_game_state();
-                    match player_action {
-                        PlayerAction::AddShip(_) => planet.add_ship(Consts::ADD_SHIP_RESOURCE_COST, game_state.get_current_player()),
-                        PlayerAction::MoveShips(from, to) => {
-                            let planets = game_state.get_starmap().get_planets();
-                            let planet_from = Planet::get_by_id(planets, from.id);
-                            let planet_to = Planet::get_by_id(planets, to.id);
-
-                            Planet::with(**planet_from, |planet| {
-                                planet.move_ships(Consts::MOVE_SHIP_FLEET_PERCENT, game_state.get_current_player(), planet_to);
-                            });
-                        },
-                        _ => ()
-                    }
+                    let planets = game_state.get_starmap().get_planets();
+                    let current_player = game_state.get_current_player();
+                    Main::perform_action(planets, current_player, player_action);
                 });
             });
 
@@ -99,8 +89,50 @@ impl Main {
     }
 
     #[export]
-    pub unsafe fn _process(&self, _owner: Node, _delta: f64) {
-        self.game_state.borrow_mut().update_ai();
+    pub unsafe fn _process(&mut self, _owner: Node, delta: f64) {
+        self.perform_update_time(delta);
+        
+        self.perform_update_ai().iter()
+            .for_each(|(ai_player, ai_move)| {
+                let game_state = self.game_state.borrow();
+                let planets = game_state.get_starmap().get_planets();
+                let player = game_state.get_players().iter()
+                    .find(|p| p.properties().id == ai_player.id)
+                    .unwrap();
+                Main::perform_action(planets, player, *ai_move);
+            });
+    }
+
+    fn perform_update_time(&self, delta: f64) {
+        let mut game_state = self.game_state.borrow_mut();
+        game_state.add_time_delta(delta);
+    }
+
+    unsafe fn perform_update_ai(&self) -> Vec<(ContenderProperties, PlayerAction)>{
+        let mut game_state = self.game_state.borrow_mut();
+        let ai_moves = game_state.update_ai();
+
+        ai_moves
+    }
+
+    unsafe fn perform_action(planets: &Vec<Rc<Node2D>>, player: &Player2D, player_action: PlayerAction) {
+        match player_action {
+            PlayerAction::AddShip(on) => {
+                let planet_on = Planet::get_by_id(planets, on.id);
+                Planet::with(**planet_on, |planet| {
+                    planet.add_ship(Consts::ADD_SHIP_RESOURCE_COST, player)
+                });
+            },
+            PlayerAction::MoveShips(from, to) => {
+                let planet_from = Planet::get_by_id(planets, from.id);
+                let planet_to = Planet::get_by_id(planets, to.id);
+
+                Planet::with(**planet_from, |planet| {
+                    planet.move_ships(Consts::MOVE_SHIP_FLEET_PERCENT, player, planet_to);
+                });
+            },
+            _ => ()
+        }
     }
 }
 

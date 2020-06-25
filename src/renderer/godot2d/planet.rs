@@ -48,7 +48,7 @@ impl Planet {
 
         let properties = CelestialProperties {
             id: 0,
-            contender_id: 0,
+            contender_id: -1,
             radius: 0.0,
             resources: resources_initial,
             resources_increase: resources_initial * rng.gen_range(0.0002, 0.005),
@@ -170,6 +170,7 @@ impl Planet {
                     winner.planets.borrow_mut().push(self.owner);    
                 }            
             } else {
+                self.properties.borrow_mut().contender_id = winner_props.id;
                 winner.planets.borrow_mut().push(self.owner);
             }
             let mut planet_sprite: Sprite = owner
@@ -191,7 +192,7 @@ impl Planet {
             let ships_count = player.ships.borrow().len();
 
             Ship::with_mut(ship_node, |ship| {
-                ship.set_id(player.properties(), ships_count);
+                ship.set_id(player.properties(), ships_count as isize);
                 ship.orbit(ship_node, props.id, owner, props.radius);
             });
         }
@@ -203,7 +204,7 @@ impl Planet {
         let ship_node: RigidBody2D = instance_scene(&self.ship).unwrap();
         
         let mut game_state = self.game_state.as_ref().unwrap().borrow_mut();
-        props.contender_id = game_state.get_players().len();
+        props.contender_id = game_state.get_players().len() as isize;
         let player = Player2D::new(props.contender_id, owner, ship_node, is_bot);
         let ships_count = player.ships.borrow().len();
         let mut planet_sprite: Sprite = owner
@@ -214,7 +215,7 @@ impl Planet {
         planet_sprite.set_modulate(player.properties().color);
         
         Ship::with_mut(ship_node, |ship| {
-            ship.set_id(player.properties(), ships_count);
+            ship.set_id(player.properties(), ships_count as isize);
             ship.orbit(ship_node, props.id, owner, props.radius);
         });
 
@@ -288,7 +289,7 @@ impl Planet {
         owner.set_position(Vector2::new(x_offset, y_offset));
     }
 
-    pub fn set_id(&self, id: usize) {
+    pub fn set_id(&self, id: isize) {
         let mut props = self.properties.borrow_mut();
         props.id = id;
     }
@@ -330,7 +331,7 @@ impl Planet {
         instance.map(|class, _owner| with_fn(class)).unwrap()
     }
 
-    pub unsafe fn get_by_id(planets: &Vec<Rc<Node2D>>, id: usize) -> &Rc<Node2D> {
+    pub unsafe fn get_by_id(planets: &Vec<Rc<Node2D>>, id: isize) -> &Rc<Node2D> {
         planets.iter()
         .find(|p| {
             Planet::with(***p, |planet| planet.properties().id == id)

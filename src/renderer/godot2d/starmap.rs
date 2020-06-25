@@ -33,7 +33,7 @@ impl Starmap for Starmap2D {
 
     fn new<F, G, H>(count: usize) -> StarmapBuilder<Node2D, Starmap2D, F, G, H> 
     where 
-        F: FnMut(usize) -> Node2D,
+        F: FnMut(isize) -> Node2D,
         G: Fn(&Node2D, &Node2D) -> bool,
         H: Fn(&Node2D) -> (),
         Self: Sized {

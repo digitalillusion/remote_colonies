@@ -5,7 +5,7 @@ use super::Starmap;
 pub struct StarmapBuilder<T, U, F, G, H>
 where 
     U: Starmap<CelestialType = T>,
-    F: FnMut(usize) -> T,
+    F: FnMut(isize) -> T,
     G: Fn(&T, &T) -> bool,
     H: Fn(&T) -> ()
 {
@@ -19,7 +19,7 @@ where
 impl <T, U, F, G, H> StarmapBuilder<T, U, F, G, H>   
 where 
     U: Starmap<CelestialType = T>,
-    F: FnMut(usize) -> T,
+    F: FnMut(isize) -> T,
     G: Fn(&T, &T) -> bool,
     H: Fn(&T) -> ()
 {
@@ -62,7 +62,8 @@ where
         while planets.len() < self.count {
             planets_invalid_indexes.reverse();
             for i in &planets_invalid_indexes {
-                let planet = Rc::new(generator(*i));
+                let planet_id = *i as isize;
+                let planet = Rc::new(generator(planet_id));
                 planets.insert(*i, planet);
             }
 

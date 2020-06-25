@@ -11,7 +11,7 @@ impl Consts {
 
 #[derive(Debug, Copy, Clone)]
 pub struct ContenderProperties {
-    pub id: usize,
+    pub id: isize,
     pub color: Color,
     pub bot: bool
 }
@@ -22,9 +22,9 @@ pub trait Contender {
 
 #[derive(Debug, Copy, Clone)]
 pub struct VesselProperties {
-    pub id: usize,
-    pub contender_id: usize,
-    pub celestial_id: usize,
+    pub id: isize,
+    pub contender_id: isize,
+    pub celestial_id: isize,
 }
 
 pub trait Vessel {
@@ -33,8 +33,8 @@ pub trait Vessel {
 
 #[derive(Debug, Copy, Clone)]
 pub struct CelestialProperties {
-    pub id: usize,
-    pub contender_id: usize,
+    pub id: isize,
+    pub contender_id: isize,
     pub radius: f32,
     pub resources: f32,
     pub resources_increase: f32,
