@@ -17,6 +17,10 @@ impl AiState {
             player_properties: player.properties()
         }
     }
+
+    pub fn refresh_facts() {
+        
+    }
 }
 
 impl GameState for AiState {

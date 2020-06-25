@@ -4,8 +4,6 @@ pub mod starmap;
 pub mod planet;
 pub mod input;
 
-use gdnative::*;
-
 use std::rc::Rc;
 
 use self::starmap::Starmap;
@@ -15,15 +13,15 @@ use crate::local::model::*;
 
 pub struct MainLoop<T,U>
 where 
-    T: GodotObject,
+    T: Starmap,
     U: Player,
 {
-    pub starmap: Option<Starmap<T>>,
+    pub starmap: Option<T>,
     pub players: Vec<Rc<U>>
 }
 
 impl <T, U> MainLoop<T, U> where 
-    T: GodotObject,
+    T: Starmap,
     U: Player,
 {
     pub fn new() -> MainLoop<T, U> {
@@ -33,7 +31,7 @@ impl <T, U> MainLoop<T, U> where
         }
     }
 
-    pub fn set_starmap(&mut self, starmap: Starmap<T>) {
+    pub fn set_starmap(&mut self, starmap: T) {
         self.starmap = Some(starmap);
     }  
 

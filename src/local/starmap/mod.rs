@@ -2,36 +2,38 @@ pub mod builder;
 
 use std::rc::Rc;
 
-use gdnative::GodotObject;
-
 use builder::StarmapBuilder;
 
-pub struct Starmap<T: GodotObject> {
-    pub planets: Vec<Rc<T>>
-}
+pub trait Starmap {
+    type CelestialType;
 
-impl <T: GodotObject> Starmap<T> {
-    pub fn new<F, G, H>(count: usize) -> StarmapBuilder<T, F, G, H> 
+    fn get_planets(&self) -> &Vec<Rc<Self::CelestialType>>;
+
+    fn set_planets(&mut self, planets: Vec<Rc<Self::CelestialType>>);
+
+    fn new<F, G, H>(count: usize) -> StarmapBuilder<Self::CelestialType, Self, F, G, H> 
     where 
-        F: FnMut(usize) -> T,
-        G: Fn(&T, &T) -> bool,
-        H: Fn(&T) -> () 
-    {
-        StarmapBuilder::new(count)
-    }   
+        F: FnMut(usize) -> Self::CelestialType,
+        G: Fn(&Self::CelestialType, &Self::CelestialType) -> bool,
+        H: Fn(&Self::CelestialType) -> (),
+        Self: Sized;  
+    
+    unsafe fn get_distance_between(planet1: &Self::CelestialType, planet2: &Self::CelestialType) -> f32 
+    where 
+        Self: Sized;
 
-    pub fn get_planets_by_max_distance<F>(&mut self, count: usize, distance_fn: F) -> Vec<Rc<T>>
-    where
-        F: Fn(&T, &T) -> f32,
+    unsafe fn get_planets_by_max_distance(&mut self, count: usize) -> Vec<Rc<Self::CelestialType>>
+    where 
+        Self: Sized
     {
         let mut max_distance = 0.0;
         let mut first = 0;
-        let mut planets:Vec<Rc<T>> = vec!();
-        self.planets.iter().for_each(|p| planets.push(p.clone()));
+        let mut planets:Vec<Rc<Self::CelestialType>> = vec!();
+        self.get_planets().iter().for_each(|p| planets.push(p.clone()));
 
         for i in 0..planets.len() {
             for j in i..planets.len() {
-                let distance = distance_fn(&planets[i], &planets[j]);
+                let distance = Self::get_distance_between(planets[i].as_ref(), planets[j].as_ref());
                 if distance > max_distance {
                     max_distance = distance;
                     first = i;
@@ -47,7 +49,7 @@ impl <T: GodotObject> Starmap<T> {
             for i in 0..planets.len() {
                 let distance: f32 = planets_by_max_distance.iter()
                     .map(|planet| {
-                        let distance = distance_fn(&planets[i], &planet);
+                        let distance = Self::get_distance_between(planets[i].as_ref(), planet.as_ref());
                         distance.sqrt()
                     }).product();
                 if distance > max_distance {

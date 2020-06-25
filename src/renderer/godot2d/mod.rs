@@ -2,6 +2,7 @@ pub mod planet;
 pub mod ship;
 mod input;
 mod player;
+mod starmap;
 
 use gdnative::*;
 
@@ -14,6 +15,7 @@ use crate::local::starmap::*;
 use crate::local::player::*;
 use crate::local::MainLoop;
 use self::input::InputHandler2D;
+use self::starmap::Starmap2D;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ManageErrs {
@@ -42,7 +44,7 @@ impl Main {
     unsafe fn _ready(&mut self, mut owner: Node) {
         let main_loop = Rc::new(RefCell::new(MainLoop::new()));
         let input_handler = Rc::new(RefCell::new(InputHandler2D::new()));
-        let mut starmap = Starmap::new(10)
+        let mut starmap = Starmap2D::new(10)
         .with_generator(|id| {
             let planet_node: Node2D = instance_scene(&self.planet).unwrap();
             owner.add_child(Some(planet_node.to_node()), false);
@@ -56,7 +58,7 @@ impl Main {
                     match player_action {
                         PlayerAction::AddShip => planet.add_ship(10.0, main_loop.get_current_player()),
                         PlayerAction::MoveShips(from, to) => {
-                            let planets = &main_loop.starmap.as_ref().unwrap().planets;
+                            let planets = &main_loop.starmap.as_ref().unwrap().get_planets();
                             let planet_from = Planet::get_by_id(planets, from.id);
                             let planet_to = Planet::get_by_id(planets, to.id);
 
@@ -72,15 +74,13 @@ impl Main {
             planet_node
         })
         .with_validator(|planet1, planet2| {
-            let distance = distance_between(planet1, planet2);
+            let distance = Starmap2D::get_distance_between(planet1, planet2);
             distance > 100.0 && distance < 1000.0
         })
         .with_cleaner(|planet| planet.free())
         .build();
 
-        starmap.get_planets_by_max_distance(5, |planet1, planet2| {
-            distance_between(planet1, planet2)
-        }).iter()
+        starmap.get_planets_by_max_distance(5).iter()
         .map(|planet_node| **planet_node)
         .for_each(|planet_node| {
             Planet::with_mut(planet_node, |planet| {
@@ -93,12 +93,6 @@ impl Main {
         main_loop.set_starmap(starmap);
         main_loop.run();
     }
-}
-
-unsafe fn distance_between(planet1: &Node2D, planet2: &Node2D) -> f32 {
-    let p1pos = Point2::new(planet1.get_position().x, planet1.get_position().y);
-    let p2pos = Point2::new(planet2.get_position().x, planet2.get_position().y);
-    p1pos.distance_to(p2pos)
 }
 
 pub unsafe fn instance_scene<Root>(scene: &PackedScene) -> Result<Root, ManageErrs>

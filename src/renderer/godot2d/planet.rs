@@ -15,6 +15,7 @@ use crate::local::input::InputHandler;
 use super::instance_scene;
 use super::input::InputHandler2D;
 use super::player::Player2D;
+use super::starmap::Starmap2D;
 
 #[derive(NativeClass)]
 #[inherit(Node2D)]
@@ -24,7 +25,7 @@ pub struct Planet {
     #[property]
     ship: PackedScene,
 
-    main_loop: Option<Rc<RefCell<MainLoop<Node2D, Player2D>>>>,
+    main_loop: Option<Rc<RefCell<MainLoop<Starmap2D, Player2D>>>>,
     business: PlanetBusiness,
     owner: Node2D,
     properties: RefCell<CelestialProperties>,
@@ -292,7 +293,7 @@ impl Planet {
         props.id = id;
     }
 
-    pub fn get_main_loop(&self) -> Ref<MainLoop<Node2D, Player2D>> {
+    pub fn get_main_loop(&self) -> Ref<MainLoop<Starmap2D, Player2D>> {
         self.main_loop.as_ref().unwrap().borrow()
     }
 
@@ -304,7 +305,7 @@ impl Planet {
         self.input_handler_fn = Some(Box::new(input_handler_fn));
     }
 
-    pub fn set_main_loop(&mut self, main_loop: Rc<RefCell<MainLoop<Node2D, Player2D>>>) {
+    pub fn set_main_loop(&mut self, main_loop: Rc<RefCell<MainLoop<Starmap2D, Player2D>>>) {
         self.main_loop = Some(main_loop);
     }
 

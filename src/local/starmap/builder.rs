@@ -1,11 +1,10 @@
 use std::rc::Rc;
 
-use gdnative::GodotObject;
-
 use super::Starmap;
 
-pub struct StarmapBuilder<T: GodotObject, F, G, H>
+pub struct StarmapBuilder<T, U, F, G, H>
 where 
+    U: Starmap<CelestialType = T>,
     F: FnMut(usize) -> T,
     G: Fn(&T, &T) -> bool,
     H: Fn(&T) -> ()
@@ -13,17 +12,20 @@ where
     count: usize,
     generator: Option<F>,
     validator: Option<G>,
-    cleaner: Option<H>
+    cleaner: Option<H>,
+    target: U,
 }
 
-impl <T: GodotObject, F, G, H> StarmapBuilder<T, F, G, H>   
+impl <T, U, F, G, H> StarmapBuilder<T, U, F, G, H>   
 where 
+    U: Starmap<CelestialType = T>,
     F: FnMut(usize) -> T,
     G: Fn(&T, &T) -> bool,
     H: Fn(&T) -> ()
 {
-    pub fn new(count: usize) -> StarmapBuilder<T, F, G, H> {
+    pub fn new(count: usize, target: U) -> StarmapBuilder<T, U, F, G, H> {
         StarmapBuilder {
+            target,
             count,
             generator: None,
             validator: None,
@@ -49,7 +51,7 @@ where
             ..self
         }
     }
-    pub fn build(self) -> Starmap<T> {
+    pub fn build(mut self) -> U {
         let mut planets: Vec<Rc<T>> = vec!();
         let mut planets_invalid_indexes: Vec<usize> = (0..self.count).rev().collect();
 
@@ -70,7 +72,8 @@ where
                         break 'remove_invalid;
                     }
                 }
-                planets_invalid_indexes.remove_item(&i);
+                let remove_index = planets_invalid_indexes.iter().position(|pii|  pii == &i).unwrap();
+                planets_invalid_indexes.remove(remove_index);
             }
 
             planets_invalid_indexes.sort_unstable();
@@ -81,8 +84,8 @@ where
             });
         }
 
-        Starmap {
-            planets
-        }
+        self.target.set_planets(planets);
+
+        self.target
     }
 }
