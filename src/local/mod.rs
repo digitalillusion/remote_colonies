@@ -83,7 +83,7 @@ impl <T, U> GameState<T, U> where
 
     pub unsafe fn update_ai(&mut self) -> Vec<(ContenderProperties, PlayerAction)> {
         let mut ai_moves = vec!();
-        if self.update_ai_time + 1.0 < self.time {
+        if self.update_ai_time + 0.5 < self.time {
             self.update_ai_time = self.time;
             let mut ships_by_player_by_planet = vec!();
             let starmap = self.starmap.as_ref().unwrap();

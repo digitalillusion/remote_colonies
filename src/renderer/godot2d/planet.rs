@@ -51,7 +51,7 @@ impl Planet {
             contender_id: usize::MAX,
             radius: 0.0,
             resources: resources_initial,
-            resources_increase: resources_initial * rng.gen_range(0.0002, 0.005),
+            resources_increase: resources_initial * rng.gen_range(Consts::PLANET_RESOURCES_INC * 0.1, Consts::PLANET_RESOURCES_INC),
             extracted: 0.0,
         };
         Planet {
@@ -123,7 +123,7 @@ impl Planet {
             .cast()
             .expect("Unable to cast to Node2D");
         let rotation = planet_orbiters.get_global_rotation();
-        planet_orbiters.set_global_rotation(rotation - 0.01);
+        planet_orbiters.set_global_rotation(rotation - 0.01 * Consts::MOVE_SHIP_SPEED_MULT as f64);
     }
 
     #[export]
