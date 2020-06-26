@@ -47,7 +47,7 @@ impl Metrics {
         let start_game_weight = 1.0 - end_game_weight;
         let num = ships_count * planets.powf(2.0 * end_game_weight);
         let den = extracted.powf(2.0 * start_game_weight) * distance_ratio.max(0.00001).powf(2.0 * start_game_weight);
-        let benefit = num / den;
+        let benefit = planets * num / den;
         (100.0 * benefit).round() as i64
     }
 }
@@ -83,7 +83,7 @@ impl AiState {
 
     pub fn get_best_move(&self) -> PlayerAction {
         let mut mcts = MCTSManager::new(self.clone(), MyMCTS, MyEvaluator, UCTPolicy::new(0.5), ApproxTable::new(1024));
-        mcts.playout_n_parallel(1000, 4);
+        mcts.playout_n_parallel(100, 4);
         mcts.best_move().unwrap()
     }
 

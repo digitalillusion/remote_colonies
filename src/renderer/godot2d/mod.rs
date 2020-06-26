@@ -75,7 +75,7 @@ impl Main {
         .with_cleaner(|planet| planet.free())
         .build();
 
-        starmap.get_planets_by_max_distance(2).iter()
+        starmap.get_planets_by_max_distance(5).iter()
         .map(|planet_node| **planet_node)
         .enumerate()
         .for_each(|(index, planet_node)| {
