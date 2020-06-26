@@ -4,14 +4,15 @@ pub struct Consts {}
 
 impl Consts {
     pub const ADD_PLAYER_RESOURCES_INIT: f32 = 100.0;
-    pub const ADD_PLAYER_RESOURCES_INC: f32 = 0.002;
+    pub const ADD_PLAYER_RESOURCES_INC: f32 = 0.02;
     pub const ADD_SHIP_RESOURCE_COST: f32 = 10.0;
     pub const MOVE_SHIP_FLEET_PERCENT: usize = 50;
+    pub const MOVE_SHIP_SPEED_MULT: f32 = 3.0;
 }
 
 #[derive(Debug, Copy, Clone)]
 pub struct ContenderProperties {
-    pub id: isize,
+    pub id: usize,
     pub color: Color,
     pub bot: bool
 }
@@ -22,9 +23,9 @@ pub trait Contender {
 
 #[derive(Debug, Copy, Clone)]
 pub struct VesselProperties {
-    pub id: isize,
-    pub contender_id: isize,
-    pub celestial_id: isize,
+    pub id: usize,
+    pub contender_id: usize,
+    pub celestial_id: usize,
 }
 
 pub trait Vessel {
@@ -33,8 +34,8 @@ pub trait Vessel {
 
 #[derive(Debug, Copy, Clone)]
 pub struct CelestialProperties {
-    pub id: isize,
-    pub contender_id: isize,
+    pub id: usize,
+    pub contender_id: usize,
     pub radius: f32,
     pub resources: f32,
     pub resources_increase: f32,

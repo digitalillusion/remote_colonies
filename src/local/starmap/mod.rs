@@ -16,7 +16,7 @@ pub trait Starmap {
 
     fn new<F, G, H>(count: usize) -> StarmapBuilder<Self::CelestialType, Self, F, G, H> 
     where 
-        F: FnMut(isize) -> Self::CelestialType,
+        F: FnMut(usize) -> Self::CelestialType,
         G: Fn(&Self::CelestialType, &Self::CelestialType) -> bool,
         H: Fn(&Self::CelestialType) -> (),
         Self: Sized;  

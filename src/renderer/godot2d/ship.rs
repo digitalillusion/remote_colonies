@@ -56,7 +56,7 @@ impl Ship {
         planet_orbiters.add_child(Some(owner.to_node()), false);
     }
 
-    pub unsafe fn orbit(&self, mut owner: RigidBody2D, celestial_id: isize, planet_node: Node2D, radius: f32) {
+    pub unsafe fn orbit(&self, mut owner: RigidBody2D, celestial_id: usize, planet_node: Node2D, radius: f32) {
         let mut props = self.properties.borrow_mut();
         props.celestial_id = celestial_id;
 
@@ -88,7 +88,7 @@ impl Ship {
         None
     }
 
-    pub unsafe fn set_id(&self, player_props: ContenderProperties, id: isize) {
+    pub unsafe fn set_id(&self, player_props: ContenderProperties, id: usize) {
         let mut props = self.properties.borrow_mut();
         props.contender_id = player_props.id;
         props.id = id;

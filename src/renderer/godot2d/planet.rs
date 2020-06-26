@@ -48,7 +48,7 @@ impl Planet {
 
         let properties = CelestialProperties {
             id: 0,
-            contender_id: -1,
+            contender_id: usize::MAX,
             radius: 0.0,
             resources: resources_initial,
             resources_increase: resources_initial * rng.gen_range(0.0002, 0.005),
@@ -81,7 +81,7 @@ impl Planet {
     pub unsafe fn _on_ship_arrival(&self, owner: Node2D, ship_node: Node) {
         let props = self.properties();
         let mut ship_node: RigidBody2D = ship_node.cast().unwrap();
-        if ship_node.get_linear_velocity().length() == 0.0 || ship_node.get_angle_to(owner.get_global_position()).abs() > 0.005 {
+        if ship_node.get_linear_velocity().length() == 0.0 || ship_node.get_angle_to(owner.get_global_position()).abs() > 0.004 {
             return;
         }
         ship_node.set_linear_velocity(Vector2::new(0.0, 0.0));
@@ -192,7 +192,7 @@ impl Planet {
             let ships_count = player.ships.borrow().len();
 
             Ship::with_mut(ship_node, |ship| {
-                ship.set_id(player.properties(), ships_count as isize);
+                ship.set_id(player.properties(), ships_count as usize);
                 ship.orbit(ship_node, props.id, owner, props.radius);
             });
         }
@@ -204,7 +204,7 @@ impl Planet {
         let ship_node: RigidBody2D = instance_scene(&self.ship).unwrap();
         
         let mut game_state = self.game_state.as_ref().unwrap().borrow_mut();
-        props.contender_id = game_state.get_players().len() as isize;
+        props.contender_id = game_state.get_players().len();
         let player = Player2D::new(props.contender_id, owner, ship_node, is_bot);
         let ships_count = player.ships.borrow().len();
         let mut planet_sprite: Sprite = owner
@@ -215,7 +215,7 @@ impl Planet {
         planet_sprite.set_modulate(player.properties().color);
         
         Ship::with_mut(ship_node, |ship| {
-            ship.set_id(player.properties(), ships_count as isize);
+            ship.set_id(player.properties(), ships_count);
             ship.orbit(ship_node, props.id, owner, props.radius);
         });
 
@@ -252,7 +252,7 @@ impl Planet {
             ship.set_global_position(position);
             
             ship.look_at(destination.get_global_position());
-            ship.set_linear_velocity((destination.get_global_position() - position).normalize() * 10.0);
+            ship.set_linear_velocity((destination.get_global_position() - position).normalize() * 10.0 * Consts::MOVE_SHIP_SPEED_MULT);
         }
     }
 
@@ -289,7 +289,7 @@ impl Planet {
         owner.set_position(Vector2::new(x_offset, y_offset));
     }
 
-    pub fn set_id(&self, id: isize) {
+    pub fn set_id(&self, id: usize) {
         let mut props = self.properties.borrow_mut();
         props.id = id;
     }
@@ -331,7 +331,7 @@ impl Planet {
         instance.map(|class, _owner| with_fn(class)).unwrap()
     }
 
-    pub unsafe fn get_by_id(planets: &Vec<Rc<Node2D>>, id: isize) -> &Rc<Node2D> {
+    pub unsafe fn get_by_id(planets: &Vec<Rc<Node2D>>, id: usize) -> &Rc<Node2D> {
         planets.iter()
         .find(|p| {
             Planet::with(***p, |planet| planet.properties().id == id)

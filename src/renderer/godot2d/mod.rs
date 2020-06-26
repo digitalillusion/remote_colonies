@@ -10,6 +10,7 @@ use planet::*;
 
 use std::cell::*;
 use std::rc::Rc;
+use std::time::SystemTime;
 
 use crate::local::starmap::*;
 use crate::local::player::*;
@@ -91,6 +92,7 @@ impl Main {
     #[export]
     pub unsafe fn _process(&mut self, _owner: Node, delta: f64) {
         self.perform_update_time(delta);
+        let start_time = SystemTime::now();
         
         self.perform_update_ai().iter()
             .for_each(|(ai_player, ai_move)| {
@@ -101,6 +103,12 @@ impl Main {
                     .unwrap();
                 Main::perform_action(planets, player, *ai_move);
             });
+        
+        let process_millis = SystemTime::now().duration_since(start_time).unwrap().as_millis();
+        let delta_millis = (delta * 1000.0).floor() as u128;
+        if  process_millis > 100 * delta_millis  {
+            godot_print!("WARNING: slow _process() took {} ms (cycle is {} ms)", process_millis, delta_millis);
+        }
     }
 
     fn perform_update_time(&self, delta: f64) {

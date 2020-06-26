@@ -87,16 +87,24 @@ impl <T, U> GameState<T, U> where
             self.update_ai_time = self.time;
             let mut ships_by_player_by_planet = vec!();
             let starmap = self.starmap.as_ref().unwrap();
-            starmap.get_planets().iter()
+            let planets = starmap.get_planets();
+            let mut planet_distances = vec!();
+            planets.iter()
                 .enumerate()
-                .for_each(|(planet_id, _planet_node)| {
+                .for_each(|(planet_id, planet_node)| {
+                    let mut distances = vec!();
+                    planets.iter().for_each(|pn| {
+                        let dist = T::get_distance_between(planet_node, pn);
+                        distances.push(dist);
+                    });
+                    planet_distances.push(distances);
                     let planet_props = starmap.get_planet_properties(planet_id);
                     let ships_by_player = self.get_ships_by_player(planet_props);
                     ships_by_player_by_planet.push((planet_props, ships_by_player));
                 });
             self.ais.iter_mut()
                 .for_each(|ai| {
-                    ai.refresh_measures(ships_by_player_by_planet.to_vec());
+                    ai.refresh_measures(&planet_distances, ships_by_player_by_planet.to_vec());
                     let tuple = (ai.get_player(), ai.get_best_move());
                     ai_moves.push(tuple);
                 });   
