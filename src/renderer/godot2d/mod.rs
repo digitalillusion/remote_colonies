@@ -49,7 +49,7 @@ impl Main {
     #[export]
     unsafe fn _ready(&mut self, mut owner: Node) {
         let input_handler = Rc::new(RefCell::new(InputHandler2D::new()));
-        let mut starmap = Starmap2D::new(10)
+        let mut starmap = Starmap2D::new(15)
         .with_generator(|id| {
             let planet_node: Node2D = instance_scene(&self.planet).unwrap();
             owner.add_child(Some(planet_node.to_node()), false);
@@ -75,7 +75,7 @@ impl Main {
         .with_cleaner(|planet| planet.free())
         .build();
 
-        starmap.get_planets_by_max_distance(5).iter()
+        starmap.get_planets_by_max_distance(2).iter()
         .map(|planet_node| **planet_node)
         .enumerate()
         .for_each(|(index, planet_node)| {
@@ -91,18 +91,12 @@ impl Main {
 
     #[export]
     pub unsafe fn _process(&mut self, _owner: Node, delta: f64) {
-        self.perform_update_time(delta);
         let start_time = SystemTime::now();
         
-        self.perform_update_ai().iter()
-            .for_each(|(ai_player, ai_move)| {
-                let game_state = self.game_state.borrow();
-                let planets = game_state.get_starmap().get_planets();
-                let player = game_state.get_players().iter()
-                    .find(|p| p.properties().id == ai_player.id)
-                    .unwrap();
-                Main::perform_action(planets, player, *ai_move);
-            });
+        self.perform_update_time(delta);
+        
+        self.perform_update_ai();
+           
         
         let process_millis = SystemTime::now().duration_since(start_time).unwrap().as_millis();
         let delta_millis = (delta * 1000.0).floor() as u128;
@@ -116,11 +110,16 @@ impl Main {
         game_state.add_time_delta(delta);
     }
 
-    unsafe fn perform_update_ai(&self) -> Vec<(ContenderProperties, PlayerAction)>{
+    unsafe fn perform_update_ai(&self) -> () {
         let mut game_state = self.game_state.borrow_mut();
-        let ai_moves = game_state.update_ai();
-
-        ai_moves
+        game_state.update_ai().iter()
+            .for_each(|(ai_player, ai_move)| {
+                let planets = game_state.get_starmap().get_planets();
+                let player = game_state.get_players().iter()
+                    .find(|p| p.properties().id == ai_player.id)
+                    .unwrap();
+                Main::perform_action(planets, player, *ai_move);
+            });
     }
 
     unsafe fn perform_action(planets: &Vec<Rc<Node2D>>, player: &Player2D, player_action: PlayerAction) {

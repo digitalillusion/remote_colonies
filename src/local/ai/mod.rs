@@ -26,28 +26,28 @@ struct Measure {
 #[derive(Clone, Debug, Hash)]
 struct Metrics {
     extracted: i64,
-    resources_ratio: i64,
+    resources_count: i64,
     ships_count: i64,
     ships_count_ratio: i64,
-    planets: i64,
+    planets_ratio: i64,
     distance_ratio: i64
 }
 
 impl Metrics {
     pub fn evaluate(&self) -> i64 {
         let extracted = self.extracted as f32;
+        let resources_count = self.resources_count as f32;
         let ships_count = self.ships_count as f32;
-        let planets = self.planets as f32;
-        
-        let resources_ratio = self.resources_ratio as f32 * 0.01;
+
+        let planets_ratio = self.planets_ratio as f32 * 0.01;
         let ships_count_ratio = self.ships_count_ratio as f32 * 0.01;
         let distance_ratio = self.distance_ratio as f32 * 0.01;
         
-        let end_game_weight = resources_ratio * ships_count_ratio;
-        let start_game_weight = 1.0 - end_game_weight;
-        let num = ships_count * planets.powf(2.0 * end_game_weight);
-        let den = extracted.powf(2.0 * start_game_weight) * distance_ratio.max(0.00001).powf(2.0 * start_game_weight);
-        let benefit = planets * num / den;
+        let strat_more_ships_when_disadvantage = (resources_count + ships_count) * (1.0 - ships_count_ratio);
+        let strat_more_conquer_planet_bonus_weighted = 2.0_f32.powf(planets_ratio * (1.0 - ships_count_ratio));
+        let strat_less_extract= extracted;
+        let strat_less_long_range_moves_when_disadvantage = distance_ratio.max(0.001).powf(2.0 * (1.0 - ships_count_ratio));
+        let benefit = (strat_more_ships_when_disadvantage + strat_more_conquer_planet_bonus_weighted) / (strat_less_extract + strat_less_long_range_moves_when_disadvantage);
         (100.0 * benefit).round() as i64
     }
 }
@@ -67,10 +67,10 @@ impl AiState {
             player,
             metrics: Metrics {
                 extracted: 0,
-                resources_ratio: 0,
+                resources_count: 0,
                 ships_count: 0,
                 ships_count_ratio: 0,
-                planets: 0,
+                planets_ratio: 0,
                 distance_ratio: 0
             },
             measures: vec!()
@@ -97,7 +97,7 @@ impl AiState {
                 distances: planet_distances.get(planet_id).unwrap().to_vec(),
                 distance: f32::INFINITY,
                 ships_by_player: ships_by_player.to_vec(),
-                resources: planet.resources,
+                resources: planet.resources + planet.extracted,
                 extracted: planet.extracted,
                 ships_count: ships_by_player.iter()
                     .fold(0, |acc, (_, ships)| acc + ships.len()),
@@ -167,9 +167,6 @@ impl GameState for AiState {
         allied_planets.iter()
             .for_each(|planet| moves.push(PlayerAction::AddShip(planet.planet_props)));
         for i in 0..allied_planets.len() {
-            for j in (i + 1)..allied_planets.len() {
-                moves.push(PlayerAction::MoveShips(allied_planets[i].planet_props, allied_planets[j].planet_props));
-            }
             for j in 0..enemy_planets.len() {
                 if j != i {
                     moves.push(PlayerAction::MoveShips(allied_planets[i].planet_props, enemy_planets[j].planet_props));
@@ -203,32 +200,28 @@ impl GameState for AiState {
             PlayerAction::Wait => ()
         }
 
-        let allied_measures: Vec<&Measure> = self.measures.iter()
+        let measures = &self.measures;
+        let allied_measures: Vec<&Measure> = measures.iter()
             .filter(|m| m.planet_props.contender_id == self.player.id)
             .collect();
 
-        let allied_resources = allied_measures.iter()
-            .map(|m| m.resources)
-            .fold(0.0, |acc, r| acc + r.floor());
         let allied_extracted = allied_measures.iter()
             .map(|m| m.extracted)
             .fold(0.0, |acc, r| acc + r.floor());
-        let total_resources = self.measures.iter()
-            .map(|m| m.resources)
-            .fold(0.0, |acc, r| acc + r.floor());
-        let allied_ships_count = self.measures.iter()
+        let allied_ships_count = measures.iter()
             .map(|m| m.allied_ships_count)
             .fold(0.0, |acc, s| acc + s as f32);
-        let total_ships_count = self.measures.iter()
+        let total_ships_count = measures.iter()
             .map(|m| m.ships_count)
             .fold(0.0, |acc, s| acc + s as f32);
         self.metrics = Metrics {
-            extracted: allied_extracted.round() as i64,
-            resources_ratio: (100.0 * allied_resources / total_resources).round() as i64,
-            ships_count: allied_ships_count.round() as i64,
-            ships_count_ratio: (100.0 * allied_ships_count / total_ships_count).round() as i64,
-            planets: allied_measures.iter()
-                .count() as i64,
+            resources_count: allied_measures.iter()
+                .map(|m| m.resources)
+                .fold(0, |acc, r| acc + r.floor() as i64),
+            extracted: allied_extracted.floor() as i64,
+            ships_count: allied_ships_count.floor() as i64,
+            ships_count_ratio: (100.0 * allied_ships_count / total_ships_count).floor() as i64,
+            planets_ratio: (100.0 * allied_measures.iter().count() as f32 / measures.iter().count() as f32) as i64,
             distance_ratio: allied_measures.iter()
                 .filter(|m| m.distance < f32::INFINITY)
                 .map(|m| {

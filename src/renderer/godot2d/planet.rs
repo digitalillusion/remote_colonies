@@ -44,7 +44,7 @@ impl Planet {
     
     fn _init(owner: Node2D) -> Planet {
         let mut rng = rand::thread_rng();
-        let resources_initial  = rng.gen_range(10.0, 250.0);
+        let resources_initial  = rng.gen_range(Consts::PLANET_RESOURCES_INIT * 0.1, Consts::PLANET_RESOURCES_INIT);
 
         let properties = CelestialProperties {
             id: 0,
@@ -123,7 +123,7 @@ impl Planet {
             .cast()
             .expect("Unable to cast to Node2D");
         let rotation = planet_orbiters.get_global_rotation();
-        planet_orbiters.set_global_rotation(rotation - 0.01 * Consts::MOVE_SHIP_SPEED_MULT as f64);
+        planet_orbiters.set_global_rotation(rotation - 0.001 * Consts::MOVE_SHIP_SPEED_MULT as f64);
     }
 
     #[export]
@@ -132,8 +132,8 @@ impl Planet {
         let game_state = self.get_game_state();
         let players = game_state.get_players();
 
-        let ships_by_player = game_state.get_ships_by_player(self.properties());
-        let (winner, casualties) = self.business.battle(ships_by_player);
+        let ships_by_player_on_planet = game_state.get_ships_by_player_on_planet(self.properties());
+        let (winner, casualties) = self.business.battle(ships_by_player_on_planet);
         
         for casualty in casualties {
             if let Some(casualty_player) = players.iter().find(|player| {
@@ -144,7 +144,7 @@ impl Planet {
                     .enumerate()
                     .find(|(_, ship_node)| {
                         Ship::with(**ship_node, |ship| {
-                            ship.properties().id == casualty.id
+                            ship.properties().id == casualty.id && ship.properties().celestial_id == self.properties().id
                         })
                     }).unwrap();
                 casualty.free();
@@ -245,6 +245,8 @@ impl Planet {
         let mut root_node = self.owner.get_parent().unwrap();
 
         for mut ship in selected_ships {
+            Ship::with(ship, |ship| ship.leave_orbit());
+
             let position = ship.get_global_position();
             let ship_node = Some(ship.to_node());
             ship.get_parent().unwrap().remove_child(ship_node);

@@ -3,12 +3,13 @@ use gdnative::Color;
 pub struct Consts {}
 
 impl Consts {
-    pub const ADD_PLAYER_RESOURCES_INIT: f32 = 100.0;
-    pub const ADD_PLAYER_RESOURCES_INC: f32 = 0.005;
-    pub const PLANET_RESOURCES_INC: f32 = 0.01;
+    pub const ADD_PLAYER_RESOURCES_INIT: f32 = 200.0;
+    pub const ADD_PLAYER_RESOURCES_INC: f32 = 0.0018;
+    pub const PLANET_RESOURCES_INIT: f32 = 600.0;
+    pub const PLANET_RESOURCES_INC: f32 = 0.0012;
     pub const ADD_SHIP_RESOURCE_COST: f32 = 10.0;
     pub const MOVE_SHIP_FLEET_PERCENT: usize = 50;
-    pub const MOVE_SHIP_SPEED_MULT: f32 = 5.0;
+    pub const MOVE_SHIP_SPEED_MULT: f32 = 10.0;
 }
 
 #[derive(Debug, Copy, Clone)]

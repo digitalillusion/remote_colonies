@@ -101,6 +101,11 @@ impl Ship {
         ship_sprite.set_modulate(player_props.color);
     }
 
+    pub fn leave_orbit(&self) {
+        let mut props = self.properties.borrow_mut();
+        props.celestial_id = usize::MAX;
+    }
+
     pub unsafe fn with_mut<F, T>(node: RigidBody2D, mut with_fn: F) -> T
     where
         F: FnMut(&mut Ship) -> T
