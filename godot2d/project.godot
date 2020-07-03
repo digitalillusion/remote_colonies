@@ -19,6 +19,10 @@ config/name="Remote Colonies 2D"
 run/main_scene="res://Main.tscn"
 config/icon="res://icon.png"
 
+[display]
+
+window/stretch/aspect="keep"
+
 [logging]
 
 file_logging/enable_file_logging=true

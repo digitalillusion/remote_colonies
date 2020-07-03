@@ -27,8 +27,8 @@ script = ExtResource( 2 )
 
 [node name="Polygon2D" type="Polygon2D" parent="."]
 position = Vector2( 3.3941, 0 )
-color = Color( 0, 0, 0, 0.376471 )
-polygon = PoolVector2Array( -2.20361, 1.39742, 1028.19, 4.5974, 1024.99, 604.594, 0.996399, 602.994, 0.996399, 602.994 )
+color = Color( 0, 0, 0, 0.607843 )
+polygon = PoolVector2Array( -15.5826, -12.7395, 1030.04, -11.7077, 1033.18, 616.045, -14.725, 618.138 )
 
 [node name="Title" type="Label" parent="."]
 margin_left = 1.0

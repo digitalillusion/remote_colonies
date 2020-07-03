@@ -11,6 +11,8 @@ use gdnative::*;
 use std::cell::*;
 use std::rc::Rc;
 use std::time::SystemTime;
+use rand::*;
+
 
 use crate::local::starmap::*;
 use crate::local::player::*;
@@ -98,6 +100,18 @@ impl Main {
 
     #[export]
     pub unsafe fn _on_game_start(&mut self, mut owner: Node, ais_count: usize, planets_count: usize, demo: bool) { 
+        let mut background: AnimatedSprite = owner
+            .get_node(NodePath::from_str("Background"))
+            .expect("Unable to find planet/Background")
+            .cast()
+            .expect("Unable to cast to AnimatedSprite");
+        let bg_count = background.get_sprite_frames().unwrap().get_frame_count("default".into());
+        let mut bg_index = background.get_index();
+        while bg_index == background.get_index() {
+            bg_index = rand::thread_rng().gen_range(0, bg_count);
+        }
+        background.set_frame(bg_index);
+        
         self.game = if demo { Game::demo() } else { Game::new(ais_count, planets_count) };
         let planet_create_fn = || {
             let planet_node: Node2D = instance_scene(&self.planet).unwrap();

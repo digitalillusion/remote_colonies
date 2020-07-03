@@ -65,7 +65,7 @@ impl Ship {
         let position = Vector2::new(radius,0.0).rotated(angle);
         owner.set_rotation(3.0 * FRAC_PI_2 + angle.radians as f64);
         owner.set_position(position);
-        owner.call_deferred(GodotString::from("reparent"), &[Variant::from(planet_node)]);
+        owner.call_deferred("reparent".into(), &[Variant::from(planet_node)]);
     }
 
     pub unsafe fn find_player(&self, players: &Vec<Rc<Player2D>>) -> Option<Rc<Player2D>> {       

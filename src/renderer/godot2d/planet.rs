@@ -110,7 +110,7 @@ impl Planet {
             .expect("Unable to find planet/Label")
             .cast()
             .expect("Unable to cast to Label");
-        planet_label.set_text(GodotString::from_str(label));
+        planet_label.set_text(label.into());
     }
 
     #[export]
