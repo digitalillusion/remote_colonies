@@ -13,7 +13,7 @@ use super::starmap::Starmap2D;
 use super::player::Player2D;
 use super::*;
 
-
+#[derive(Debug, Copy, Clone)]
 pub struct Game {
     players_count: usize,
     planets_count: usize,
@@ -25,13 +25,29 @@ impl Game {
     pub fn demo() -> Self {
         Game {
             planets_count: 15,
+            demo: true,
             players_count: 10,
-            demo: true
+        }
+    }
+
+    pub fn new(ais_count: usize, planets_count: usize) -> Self {
+        Game {
+            planets_count,
+            demo: false,
+            players_count: ais_count + 1,
         }
     }
 
     pub fn is_demo(&self) -> bool {
         self.demo
+    }
+
+    pub fn get_ais_count(&self) -> usize {
+        self.players_count - 1
+    }
+
+    pub fn get_planets_count(&self) -> usize {
+        self.planets_count
     }
 
     pub unsafe fn start<F>(&self, game_state: Rc<RefCell<GameState<Starmap2D, Player2D>>>, mut planet_create_fn: F)
@@ -49,9 +65,10 @@ impl Game {
                     planet.set_id(id);
                     planet.set_input_handler(input_handler.clone(), |planet, player_action| {
                         let game_state = planet.get_game_state();
-                        let planets = game_state.get_starmap().get_planets();
-                        let current_player = game_state.get_current_player();
-                        Game::perform_action(planets, current_player, player_action);
+                        if let Some(current_player) = game_state.get_current_player() {
+                            let planets = game_state.get_starmap().get_planets();
+                            Game::perform_action(planets, current_player, player_action);
+                        }
                     });
                 });
 

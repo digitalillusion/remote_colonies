@@ -12,12 +12,14 @@ pub mod renderer;
 use gdnative::*;
 
 use crate::renderer::godot2d::Main;
+use crate::renderer::godot2d::hud::HUD;
 use crate::renderer::godot2d::planet::Planet;
 use crate::renderer::godot2d::ship::Ship;
 
 fn init(handle: gdnative::init::InitHandle) {
     handle.add_class::<Planet>();
     handle.add_class::<Ship>();
+    handle.add_class::<HUD>();
     handle.add_class::<Main>();
 }
 

@@ -19,7 +19,6 @@ use super::starmap::Starmap2D;
 
 #[derive(NativeClass)]
 #[inherit(Node2D)]
-
 pub struct Planet {
 
     #[property]
@@ -102,8 +101,7 @@ impl Planet {
         let orbiters_count = planet_orbiters.get_children().len();
         self.business.resources_update(&mut props, orbiters_count);
 
-        let label = &format!("{} - {}/{}", 
-            props.id.to_string(), 
+        let label = &format!("{}/{}", 
             (props.resources as usize).to_string(),
             (props.extracted as usize).to_string()
         );

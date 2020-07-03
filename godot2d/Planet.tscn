@@ -11,7 +11,9 @@ radius = 11.1133
 font_path = "res://art/pirulen.ttf"
 
 [sub_resource type="DynamicFont" id=3]
-size = 12
+size = 14
+outline_size = 1
+outline_color = Color( 0, 0, 0, 1 )
 font_data = SubResource( 2 )
 
 [node name="Node2D" type="Node2D"]
@@ -38,7 +40,6 @@ margin_top = -44.9461
 margin_right = 45.9461
 margin_bottom = 47.0539
 custom_fonts/font = SubResource( 3 )
-custom_colors/font_color = Color( 0, 0, 0, 1 )
 align = 1
 valign = 1
 __meta__ = {

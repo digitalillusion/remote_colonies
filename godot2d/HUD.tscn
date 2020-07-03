@@ -1,6 +1,7 @@
-[gd_scene load_steps=6 format=2]
+[gd_scene load_steps=7 format=2]
 
 [ext_resource path="res://art/pirulen.ttf" type="DynamicFontData" id=1]
+[ext_resource path="res://HUD.gdns" type="Script" id=2]
 
 [sub_resource type="DynamicFont" id=1]
 size = 58
@@ -22,12 +23,14 @@ font_data = SubResource( 3 )
 
 [node name="Node2D" type="Node2D"]
 z_index = 100
+script = ExtResource( 2 )
 
 [node name="Polygon2D" type="Polygon2D" parent="."]
+position = Vector2( 3.3941, 0 )
 color = Color( 0, 0, 0, 0.376471 )
 polygon = PoolVector2Array( -2.20361, 1.39742, 1028.19, 4.5974, 1024.99, 604.594, 0.996399, 602.994, 0.996399, 602.994 )
 
-[node name="Label" type="Label" parent="."]
+[node name="Title" type="Label" parent="."]
 margin_left = 1.0
 margin_top = 2.0
 margin_right = 1024.0
@@ -41,11 +44,11 @@ __meta__ = {
 "_edit_use_anchors_": false
 }
 
-[node name="PlayersSlider" type="HSlider" parent="."]
+[node name="AisSlider" type="HSlider" parent="."]
 margin_left = 460.2
-margin_top = 232.8
+margin_top = 231.2
 margin_right = 817.2
-margin_bottom = 280.8
+margin_bottom = 279.2
 rect_pivot_offset = Vector2( -144.005, 48 )
 min_value = 1.0
 max_value = 10.0
@@ -60,7 +63,7 @@ margin_left = 164.799
 margin_top = 212.799
 margin_right = 438.799
 margin_bottom = 298.799
-rect_pivot_offset = Vector2( 151.396, 68.0009 )
+rect_pivot_offset = Vector2( 295.401, 88.8 )
 custom_fonts/font = SubResource( 2 )
 text = "Number of ai players"
 valign = 1
@@ -68,16 +71,29 @@ __meta__ = {
 "_edit_use_anchors_": false
 }
 
+[node name="Label4" type="Label" parent="."]
+margin_left = 456.252
+margin_top = 258.81
+margin_right = 826.252
+margin_bottom = 285.81
+rect_pivot_offset = Vector2( 295.401, 88.8 )
+custom_fonts/font = SubResource( 2 )
+text = " 1                  5                      10"
+valign = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
 [node name="PlanetsSlider" type="HSlider" parent="."]
 margin_left = 460.2
-margin_top = 303.199
+margin_top = 301.599
 margin_right = 817.2
-margin_bottom = 351.199
+margin_bottom = 349.599
 rect_pivot_offset = Vector2( -144.005, 48 )
-min_value = 1.0
-max_value = 15.0
-value = 1.0
-tick_count = 15
+min_value = 2.0
+max_value = 20.0
+value = 2.0
+tick_count = 19
 __meta__ = {
 "_edit_use_anchors_": false
 }
@@ -95,6 +111,19 @@ __meta__ = {
 "_edit_use_anchors_": false
 }
 
+[node name="Label5" type="Label" parent="."]
+margin_left = 456.818
+margin_top = 334.045
+margin_right = 826.818
+margin_bottom = 361.045
+rect_pivot_offset = Vector2( 295.401, 88.8 )
+custom_fonts/font = SubResource( 2 )
+text = " 2                 10                     20"
+valign = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
 [node name="Button" type="Button" parent="."]
 margin_left = 388.798
 margin_top = 406.398
@@ -105,3 +134,6 @@ text = "Start"
 __meta__ = {
 "_edit_use_anchors_": false
 }
+[connection signal="value_changed" from="AisSlider" to="." method="_on_hud_ais_slider_change"]
+[connection signal="value_changed" from="PlanetsSlider" to="." method="_on_hud_planets_slider_change"]
+[connection signal="button_up" from="Button" to="." method="_on_start_button_up"]

@@ -1,5 +1,6 @@
 pub mod planet;
 pub mod ship;
+pub mod hud;
 mod game;
 mod input;
 mod player;
@@ -18,6 +19,7 @@ use crate::local::model::*;
 use self::starmap::Starmap2D;
 use self::player::Player2D;
 use self::game::Game;
+use self::hud::HUD;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ManageErrs {
@@ -28,12 +30,17 @@ pub enum ManageErrs {
 #[derive(NativeClass)]
 #[inherit(Node)]
 #[user_data(user_data::LocalCellData<Main>)]
+#[register_with(Self::register_signals)]
 pub struct Main {
     #[property]
     planet: PackedScene,
+    #[property]
+    hud: PackedScene,
 
     game_state: Rc<RefCell<GameState<Starmap2D, Player2D>>>,
-    game: Game
+    game: Game,
+
+    hud_node: Option<Node2D>
 }
 
 #[methods]
@@ -42,18 +49,20 @@ impl Main {
     fn _init(_owner: Node) -> Self {
         Main {
             planet: PackedScene::new(),
+            hud: PackedScene::new(),
             game_state: Rc::new(RefCell::new(GameState::new())),
-            game: Game::demo()
+            game: Game::demo(),
+            hud_node: None
         }
     }
     
     #[export]
     unsafe fn _ready(&mut self, mut owner: Node) {
-        self.game.start(self.game_state.clone(), || {
-            let planet_node: Node2D = instance_scene(&self.planet).unwrap();
-            owner.add_child(Some(planet_node.to_node()), false);
-            planet_node
-        });
+        self._on_game_start(owner, self.game.get_ais_count(), self.game.get_planets_count(), self.game.is_demo());
+        
+        let hud_node: Node2D = instance_scene(&self.hud).unwrap();
+        owner.add_child(Some(hud_node.to_node()), false);
+        self.hud_node = Some(hud_node);
     }
 
     #[export]
@@ -66,18 +75,58 @@ impl Main {
 
         let (winner, losers) = self.perform_check_game_over(); 
         if self.game.is_demo() && winner.is_some() {
-            self.game = Game::demo();
-            self._ready(owner);
+            self._on_game_start(owner, self.game.get_ais_count(), self.game.get_planets_count(), self.game.is_demo());
         } else if !self.game.is_demo() {
-            losers.iter();
+            let game_state = self.game_state.borrow();
+            let current_player = game_state.get_current_player().unwrap();
+            if losers.iter()
+                .any(|l| l.properties().id == current_player.properties().id) {
+                HUD::with(self.hud_node.unwrap(), |hud| hud.game_over(false));
+            } else if let Some(winner) = winner {
+                if winner.properties().id == current_player.properties().id {
+                    HUD::with(self.hud_node.unwrap(), |hud| hud.game_over(true));
+                }
+            }
         }
-           
         
         let process_millis = SystemTime::now().duration_since(start_time).unwrap().as_millis();
         let delta_millis = (delta * 1000.0).floor() as u128;
         if  process_millis > 100 * delta_millis  {
             godot_print!("WARNING: slow _process() took {} ms (cycle is {} ms)", process_millis, delta_millis);
         }
+    }
+
+    #[export]
+    pub unsafe fn _on_game_start(&mut self, mut owner: Node, ais_count: usize, planets_count: usize, demo: bool) { 
+        self.game = if demo { Game::demo() } else { Game::new(ais_count, planets_count) };
+        let planet_create_fn = || {
+            let planet_node: Node2D = instance_scene(&self.planet).unwrap();
+            owner.add_child(Some(planet_node.to_node()), false);
+            planet_node
+        };
+        self.game.start(self.game_state.clone(), planet_create_fn);
+    }
+
+    fn register_signals(builder: &init::ClassBuilder<Self>) {
+        builder.add_signal(init::Signal {
+            name: "start_game",
+            args: &[init::SignalArgument {
+                default: Variant::from_u64(10),
+                export_info: init::ExportInfo::new(VariantType::I64),
+                name: "ais_count",
+                usage: init::PropertyUsage::SCRIPT_VARIABLE
+            }, init::SignalArgument {
+                default: Variant::from_u64(15),
+                export_info: init::ExportInfo::new(VariantType::I64),
+                name: "planets_count",
+                usage: init::PropertyUsage::SCRIPT_VARIABLE
+            }, init::SignalArgument {
+                default: Variant::from_bool(true),
+                export_info: init::ExportInfo::new(VariantType::Bool),
+                name: "demo",
+                usage: init::PropertyUsage::SCRIPT_VARIABLE
+            }],
+        });
     }
 
     fn perform_update_time(&self, delta: f64) {
@@ -101,8 +150,6 @@ impl Main {
         let game_state = self.game_state.borrow();
         game_state.check_game_over()
     }
-
-
 }
 
 pub unsafe fn instance_scene<Root>(scene: &PackedScene) -> Result<Root, ManageErrs>

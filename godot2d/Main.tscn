@@ -7,5 +7,5 @@
 [node name="main" type="Node"]
 script = ExtResource( 1 )
 planet = ExtResource( 2 )
-
-[node name="Node2D" parent="." instance=ExtResource( 3 )]
+hud = ExtResource( 3 )
+[connection signal="start_game" from="." to="." method="_on_game_start"]

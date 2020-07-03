@@ -64,10 +64,9 @@ impl <T, U> GameState<T, U> where
         self.time += delta;
     }
 
-    pub fn get_current_player(&self) -> &Rc<U> {
+    pub fn get_current_player(&self) -> Option<&Rc<U>> {
         self.players.iter()
             .find(|p| !p.properties().bot)
-            .unwrap()
     }
 
     pub fn get_starmap(&self) -> &T {
