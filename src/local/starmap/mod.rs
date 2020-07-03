@@ -20,6 +20,8 @@ pub trait Starmap {
         G: Fn(&Self::CelestialType, &Self::CelestialType) -> bool,
         H: Fn(&Self::CelestialType) -> (),
         Self: Sized;  
+
+    unsafe fn destroy(&self) -> ();
     
     unsafe fn get_distance_between(planet1: &Self::CelestialType, planet2: &Self::CelestialType) -> f32 
     where 

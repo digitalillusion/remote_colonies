@@ -12,6 +12,8 @@ pub trait Player : Contender {
     type VesselType;
 
     fn new(id: usize, planet: Self::CelestialType, ship: Self::VesselType, is_bot: bool) -> Self;
+    unsafe fn destroy(&self);
     fn add_ship(&self, ship: Self::VesselType);
+    fn is_playing(&self) -> bool;
     unsafe fn get_ships_on_planet(&self, planet: CelestialProperties) -> Vec<VesselProperties>;
 }

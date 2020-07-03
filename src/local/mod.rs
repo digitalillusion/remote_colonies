@@ -37,6 +37,17 @@ impl <T, U> GameState<T, U> where
         }
     }
 
+    pub unsafe fn reset(&mut self) {
+        if let Some(starmap) = &mut self.starmap {
+            starmap.destroy();
+        }
+        self.players.iter()
+            .for_each(|p| p.destroy());
+        self.players.clear();
+        self.ais.clear();
+        self.time = 0.0;
+    }
+
     pub fn set_starmap(&mut self, starmap: T) {
         self.starmap = Some(starmap);
     }  
@@ -104,5 +115,18 @@ impl <T, U> GameState<T, U> where
             });   
 
         ai_moves
+    }
+
+    pub fn check_game_over(&self) -> (Option<Rc<U>>, Vec<Rc<U>>) {
+        let playing: Vec<Rc<U>> = self.players.iter()
+            .filter_map(|p| return if p.is_playing() { Some(p.clone()) } else { None} )
+            .collect();
+        let not_playing: Vec<Rc<U>> = self.players.iter()
+            .filter_map(|p| return if !p.is_playing() { Some(p.clone()) } else { None} )
+            .collect();
+        if playing.len() == 1 {
+            return (Some(playing.get(0).unwrap().clone()), not_playing);
+        }
+        (None, not_playing)
     }
 }

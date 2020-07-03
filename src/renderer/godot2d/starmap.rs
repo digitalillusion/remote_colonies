@@ -42,6 +42,11 @@ impl Starmap for Starmap2D {
         })
     }
 
+    unsafe fn destroy(&self) -> () {
+        self.planets.iter()
+            .for_each(|p| p.free());
+    }
+
     unsafe fn get_distance_between(planet1: &Node2D, planet2: &Node2D) -> f32 {
         let p1pos = Point2::new(planet1.get_position().x, planet1.get_position().y);
         let p2pos = Point2::new(planet2.get_position().x, planet2.get_position().y);

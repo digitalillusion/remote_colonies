@@ -38,8 +38,17 @@ impl Player for Player2D {
         }
     }
 
+    unsafe fn destroy(&self) {
+        self.ships.borrow_mut().iter_mut()
+            .for_each(|s| s.queue_free());
+    }
+
     fn add_ship(&self, ship: RigidBody2D) {
         self.ships.borrow_mut().push(ship);
+    }
+
+    fn is_playing(&self) -> bool {
+        self.ships.borrow().len() > 0
     }
 
     unsafe fn get_ships_on_planet(&self, planet_props: CelestialProperties) -> Vec<VesselProperties> {
