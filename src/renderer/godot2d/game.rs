@@ -76,7 +76,7 @@ impl Game {
             })
             .with_validator(|planet1, planet2| {
                 let distance = Starmap2D::get_distance_between(planet1, planet2);
-                distance > 100.0 && distance < 1000.0
+                distance > 100.0 && distance < 2000.0
             })
             .with_cleaner(|planet| planet.free())
             .build();

@@ -1,8 +1,8 @@
 [gd_scene load_steps=10 format=2]
 
 [ext_resource path="res://Main.gdns" type="Script" id=1]
-[ext_resource path="res://Planet.tscn" type="PackedScene" id=2]
-[ext_resource path="res://HUD.tscn" type="PackedScene" id=3]
+[ext_resource path="res://HUD.tscn" type="PackedScene" id=2]
+[ext_resource path="res://Planet.tscn" type="PackedScene" id=3]
 [ext_resource path="res://art/0.jpg" type="Texture" id=4]
 [ext_resource path="res://art/3.jpg" type="Texture" id=5]
 [ext_resource path="res://art/1.jpg" type="Texture" id=6]
@@ -19,8 +19,8 @@ animations = [ {
 
 [node name="main" type="Node"]
 script = ExtResource( 1 )
-hud = ExtResource( 3 )
-planet = ExtResource( 2 )
+hud = ExtResource( 2 )
+planet = ExtResource( 3 )
 
 [node name="Background" type="AnimatedSprite" parent="."]
 position = Vector2( 517.308, 304.637 )
