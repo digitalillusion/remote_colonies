@@ -98,8 +98,16 @@ impl Planet {
             .expect("Unable to find planet/Orbiters")
             .cast()
             .expect("Unable to cast to Node2D");
-        let orbiters_count = planet_orbiters.get_children().len();
-        self.business.resources_update(&mut props, orbiters_count);
+        let mut ships_count = 0;
+        for i in 0..planet_orbiters.get_children().len() {
+            let orbiter: RigidBody2D = planet_orbiters.get_child(i as i64).unwrap().cast().unwrap();
+            Ship::with_mut(orbiter, |ship| {
+                if ship.properties().contender_id == props.contender_id {
+                    ships_count += 1;
+                }
+            })
+        }
+        self.business.resources_update(&mut props, ships_count);
 
         let label = &format!("{}/{}", 
             (props.resources as usize).to_string(),

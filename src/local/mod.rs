@@ -38,13 +38,13 @@ impl <T, U> GameState<T, U> where
     }
 
     pub unsafe fn reset(&mut self) {
-        if let Some(starmap) = &mut self.starmap {
-            starmap.destroy();
-        }
         self.players.iter()
             .for_each(|p| p.destroy());
         self.players.clear();
         self.ais.clear();
+        if let Some(starmap) = &mut self.starmap {
+            starmap.destroy();
+        }
         self.time = 0.0;
     }
 

@@ -26,28 +26,22 @@ struct Measure {
 #[derive(Clone, Debug, Hash)]
 struct Metrics {
     extracted: i64,
-    resources_count: i64,
     ships_count: i64,
     ships_count_ratio: i64,
-    planets_ratio: i64,
-    distance_ratio: i64
+    planets_ratio: i64
 }
 
 impl Metrics {
     pub fn evaluate(&self) -> i64 {
         let extracted = self.extracted as f32;
-        let resources_count = self.resources_count as f32;
         let ships_count = self.ships_count as f32;
 
         let planets_ratio = self.planets_ratio as f32 * 0.01;
         let ships_count_ratio = self.ships_count_ratio as f32 * 0.01;
-        let distance_ratio = self.distance_ratio as f32 * 0.01;
         
-        let strat_more_ships_when_disadvantage = (resources_count + ships_count) * (1.0 - ships_count_ratio);
-        let strat_more_conquer_planet_bonus_weighted = 2.0_f32.powf(planets_ratio * (1.0 - ships_count_ratio));
-        let strat_less_extract= extracted;
-        let strat_less_long_range_moves_when_disadvantage = distance_ratio.max(0.001).powf(2.0 * (1.0 - ships_count_ratio));
-        let benefit = (strat_more_ships_when_disadvantage + strat_more_conquer_planet_bonus_weighted) / (strat_less_extract + strat_less_long_range_moves_when_disadvantage);
+        let strat_more_ships_when_disadvantage = ships_count * (1.0 - ships_count_ratio);
+        let strat_more_conquer_planet_when_advantage = planets_ratio * 10.0f32.powf(ships_count_ratio);
+        let benefit = strat_more_ships_when_disadvantage * strat_more_conquer_planet_when_advantage / 1.000001f32.powf(extracted);
         (100.0 * benefit).round() as i64
     }
 }
@@ -67,11 +61,9 @@ impl AiState {
             player,
             metrics: Metrics {
                 extracted: 0,
-                resources_count: 0,
                 ships_count: 0,
                 ships_count_ratio: 0,
-                planets_ratio: 0,
-                distance_ratio: 0
+                planets_ratio: 0
             },
             measures: vec!()
         }
@@ -115,33 +107,49 @@ impl AiState {
 
     fn make_move_ships (player_id: usize, from: &mut Measure, to: &mut Measure) {
         let planet_business = PlanetBusiness::new();
-        let mut allied_ships: Vec<VesselProperties> = from.ships_by_player.iter()
+        let allied_ships: &mut Vec<VesselProperties> = from.ships_by_player.iter_mut()
             .find_map(|(player, ships)| {
                 if player.id == player_id {
-                    return Some(ships.to_vec())
+                    return Some(ships)
                 }
                 None
             }).unwrap();
         let count: usize = planet_business.count_ships_to_move(allied_ships.len(), Consts::MOVE_SHIP_FLEET_PERCENT);
-        let (_, allied_ships_on_planet) = to.ships_by_player.iter_mut()
+        if count > 0 {
+            let (_, allied_ships_on_planet) = to.ships_by_player.iter_mut()
             .find(|(player, _)| player.id == player_id)
             .unwrap();
-        allied_ships.drain(0..count)
-            .for_each(|allied_ship| allied_ships_on_planet.push(allied_ship));
-        let count_allied_ships_on_planet = allied_ships_on_planet.len();
-
-        let (winner, casualties) = planet_business.battle(to.ships_by_player.to_vec());
-        from.distance = *to.distances.get(from.planet_props.id).unwrap();
-        to.distance = 0.0;
-        from.ships_count -= count.min(from.ships_count);
-        from.allied_ships_count -= count.min(from.allied_ships_count);
-        to.ships_count -= casualties.len().min(to.ships_count);
-        to.allied_ships_count = count_allied_ships_on_planet - casualties.iter()
-            .filter(|c| c.contender_id == player_id)
-            .count();
-        if let Some(winner) = winner {
-            if winner.id == player_id {
-                to.planet_props.contender_id = winner.id
+            
+            allied_ships.drain(0..count)
+                .for_each(|allied_ship| allied_ships_on_planet.push(allied_ship));
+            
+            let (winner, casualties) = planet_business.battle(to.ships_by_player.to_vec());
+            from.distance = 0.0;
+            to.distance = *to.distances.get(from.planet_props.id).unwrap();
+            from.ships_count = from.ships_by_player.iter()
+                .fold(0, |acc, (_, ships)| acc + ships.len());
+            from.allied_ships_count = from.ships_by_player.iter()
+                .fold(0, |acc, (player, ships)| {
+                    if player.id == player_id {
+                        return acc + ships.len()
+                    }
+                    acc
+                });
+            to.ships_count = to.ships_by_player.iter()
+                .fold(0, |acc, (_, ships)| acc + ships.len()) - casualties.len();
+            to.allied_ships_count = to.ships_by_player.iter()
+                .fold(0, |acc, (player, ships)| {
+                    if player.id == player_id {
+                        return acc + ships.len()
+                    }
+                    acc
+                }) - casualties.iter()
+                .filter(|c| c.contender_id == player_id)
+                .count();
+            if let Some(winner) = winner {
+                if winner.id == player_id {
+                    to.planet_props.contender_id = winner.id
+                }
             }
         }
     }
@@ -167,10 +175,13 @@ impl GameState for AiState {
         allied_planets.iter()
             .for_each(|planet| moves.push(PlayerAction::AddShip(planet.planet_props)));
         for i in 0..allied_planets.len() {
+            for j in (i + 1)..allied_planets.len() {
+                moves.push(PlayerAction::MoveShips(allied_planets[i].planet_props, allied_planets[j].planet_props));
+            }
+        }
+        for i in 0..allied_planets.len() {
             for j in 0..enemy_planets.len() {
-                if j != i {
-                    moves.push(PlayerAction::MoveShips(allied_planets[i].planet_props, enemy_planets[j].planet_props));
-                }
+                moves.push(PlayerAction::MoveShips(allied_planets[i].planet_props, enemy_planets[j].planet_props));
             }
         }
 
@@ -195,7 +206,13 @@ impl GameState for AiState {
                 let first_index = if measure_from < measure_to { measure_from } else { measure_to };
                 let second_index = if measure_from < measure_to { measure_to } else { measure_from };
                 let (head, tail) = self.measures.split_at_mut(first_index + 1);
-                Self::make_move_ships(self.player.id, &mut head[first_index], &mut tail[second_index - first_index - 1]);
+                let first_measure = &mut head[first_index];
+                let second_measure = &mut tail[second_index - first_index - 1];
+                if measure_from < measure_to { 
+                    Self::make_move_ships(self.player.id, first_measure, second_measure);
+                } else {
+                    Self::make_move_ships(self.player.id, second_measure, first_measure);
+                }
             },
             PlayerAction::Wait => ()
         }
@@ -215,20 +232,10 @@ impl GameState for AiState {
             .map(|m| m.ships_count)
             .fold(0.0, |acc, s| acc + s as f32);
         self.metrics = Metrics {
-            resources_count: allied_measures.iter()
-                .map(|m| m.resources)
-                .fold(0, |acc, r| acc + r.floor() as i64),
             extracted: allied_extracted.floor() as i64,
             ships_count: allied_ships_count.floor() as i64,
             ships_count_ratio: (100.0 * allied_ships_count / total_ships_count).floor() as i64,
-            planets_ratio: (100.0 * allied_measures.iter().count() as f32 / measures.iter().count() as f32) as i64,
-            distance_ratio: allied_measures.iter()
-                .filter(|m| m.distance < f32::INFINITY)
-                .map(|m| {
-                    let distance_max = m.distances.iter().map(|d| *d).fold(0.0, f32::max);
-                    100.0 * (m.distance / distance_max)
-                })
-                .fold(0, |acc, d| acc + d.floor() as i64)
+            planets_ratio: (100.0 * allied_measures.iter().count() as f32 / measures.iter().count() as f32) as i64
         };
     }
     

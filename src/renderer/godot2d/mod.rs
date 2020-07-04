@@ -93,7 +93,7 @@ impl Main {
         
         let process_millis = SystemTime::now().duration_since(start_time).unwrap().as_millis();
         let delta_millis = (delta * 1000.0).floor() as u128;
-        if  process_millis > 100 * delta_millis  {
+        if  delta_millis > 0 && process_millis > 100 * delta_millis  {
             godot_print!("WARNING: slow _process() took {} ms (cycle is {} ms)", process_millis, delta_millis);
         }
     }
@@ -108,7 +108,7 @@ impl Main {
         let bg_count = background.get_sprite_frames().unwrap().get_frame_count("default".into());
         let mut bg_index = background.get_index();
         while bg_index == background.get_index() {
-            bg_index = rand::thread_rng().gen_range(0, bg_count);
+            bg_index = rand::thread_rng().gen_range(-1, bg_count );
         }
         background.set_frame(bg_index);
         
