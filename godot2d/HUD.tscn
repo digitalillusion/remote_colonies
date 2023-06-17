@@ -40,9 +40,6 @@ custom_fonts/font = SubResource( 1 )
 text = "REMOTE COLONIES"
 align = 1
 valign = 1
-__meta__ = {
-"_edit_use_anchors_": false
-}
 
 [node name="AisSlider" type="HSlider" parent="."]
 margin_left = 460.2
@@ -131,9 +128,7 @@ margin_right = 626.798
 margin_bottom = 485.398
 custom_fonts/font = SubResource( 4 )
 text = "Start"
-__meta__ = {
-"_edit_use_anchors_": false
-}
+
 [connection signal="value_changed" from="AisSlider" to="." method="_on_hud_ais_slider_change"]
 [connection signal="value_changed" from="PlanetsSlider" to="." method="_on_hud_planets_slider_change"]
 [connection signal="button_up" from="Button" to="." method="_on_start_button_up"]

@@ -1,20 +1,19 @@
+pub mod ai;
+pub mod input;
 pub mod model;
+pub mod planet;
 pub mod player;
 pub mod starmap;
-pub mod planet;
-pub mod input;
-pub mod ai;
 
 use std::rc::Rc;
 
-use self::starmap::Starmap;
 use self::player::*;
-use crate::local::model::*;
+use self::starmap::Starmap;
 use crate::local::ai::*;
+use crate::local::model::*;
 
-
-pub struct GameState<T,U>
-where 
+pub struct GameState<T, U>
+where
     T: Starmap,
     U: Player,
 {
@@ -24,22 +23,32 @@ where
     time: f64,
 }
 
-impl <T, U> GameState<T, U> where 
+impl<T, U> Default for GameState<T, U>
+where
+    T: Starmap,
+    U: Player,
+{
+    fn default() -> Self {
+        GameState {
+            starmap: None,
+            players: vec![],
+            ais: vec![],
+            time: 0.0,
+        }
+    }
+}
+
+impl<T, U> GameState<T, U>
+where
     T: Starmap,
     U: Player,
 {
     pub fn new() -> GameState<T, U> {
-        GameState {
-            starmap: None,
-            players: vec!(),
-            ais: vec!(),
-            time: 0.0,
-        }
+        GameState::default()
     }
 
-    pub unsafe fn reset(&mut self) {
-        self.players.iter()
-            .for_each(|p| p.destroy());
+    pub fn reset(&mut self) {
+        self.players.iter().for_each(|p| p.destroy());
         self.players.clear();
         self.ais.clear();
         if let Some(starmap) = &mut self.starmap {
@@ -50,7 +59,7 @@ impl <T, U> GameState<T, U> where
 
     pub fn set_starmap(&mut self, starmap: T) {
         self.starmap = Some(starmap);
-    }  
+    }
 
     pub fn add_player(&mut self, player: Rc<U>) {
         self.players.push(player.clone());
@@ -65,8 +74,7 @@ impl <T, U> GameState<T, U> where
     }
 
     pub fn get_current_player(&self) -> Option<&Rc<U>> {
-        self.players.iter()
-            .find(|p| !p.properties().bot)
+        self.players.iter().find(|p| !p.properties().bot)
     }
 
     pub fn get_starmap(&self) -> &T {
@@ -77,8 +85,11 @@ impl <T, U> GameState<T, U> where
         &self.players
     }
 
-    pub unsafe fn get_ships_by_player_on_planet(&self, planet: CelestialProperties) -> Vec<(ContenderProperties, Vec<VesselProperties>)> {
-        let mut ships_by_player: Vec<(ContenderProperties, Vec<VesselProperties>)> = vec!();
+    pub fn get_ships_by_player_on_planet(
+        &self,
+        planet: CelestialProperties,
+    ) -> Vec<(ContenderProperties, Vec<VesselProperties>)> {
+        let mut ships_by_player: Vec<(ContenderProperties, Vec<VesselProperties>)> = vec![];
         self.players.iter().for_each(|player| {
             let ships_on_planet = player.get_ships_on_planet(planet);
             let tuple = (player.properties(), ships_on_planet);
@@ -87,16 +98,17 @@ impl <T, U> GameState<T, U> where
         ships_by_player
     }
 
-    pub unsafe fn update_ai(&mut self) -> Vec<(ContenderProperties, PlayerAction)> {
-        let mut ai_moves = vec!();
-        let mut ships_by_player_by_planet = vec!();
+    pub fn update_ai(&mut self) -> Vec<(ContenderProperties, PlayerAction)> {
+        let mut ai_moves = vec![];
+        let mut ships_by_player_by_planet = vec![];
         let starmap = self.starmap.as_ref().unwrap();
         let planets = starmap.get_planets();
-        let mut planet_distances = vec!();
-        planets.iter()
+        let mut planet_distances = vec![];
+        planets
+            .iter()
             .enumerate()
             .for_each(|(planet_id, planet_node)| {
-                let mut distances = vec!();
+                let mut distances = vec![];
                 planets.iter().for_each(|pn| {
                     let dist = T::get_distance_between(planet_node, pn);
                     distances.push(dist);
@@ -106,22 +118,37 @@ impl <T, U> GameState<T, U> where
                 let ships_by_player = self.get_ships_by_player_on_planet(planet_props);
                 ships_by_player_by_planet.push((planet_props, ships_by_player));
             });
-        self.ais.iter_mut()
-            .for_each(|ai| {
-                ai.refresh_measures(&planet_distances, ships_by_player_by_planet.to_vec());
-                let tuple = (ai.get_player(), ai.get_best_move());
-                ai_moves.push(tuple);
-            });   
+        self.ais.iter_mut().for_each(|ai| {
+            ai.refresh_measures(&planet_distances, ships_by_player_by_planet.to_vec());
+            let tuple = (ai.get_player(), ai.get_best_move());
+            ai_moves.push(tuple);
+        });
 
         ai_moves
     }
 
     pub fn check_game_over(&self) -> (Option<Rc<U>>, Vec<Rc<U>>) {
-        let playing: Vec<Rc<U>> = self.players.iter()
-            .filter_map(|p| return if p.is_playing() { Some(p.clone()) } else { None} )
+        let playing: Vec<Rc<U>> = self
+            .players
+            .iter()
+            .filter_map(|p| {
+                if p.is_playing() {
+                    Some(p.clone())
+                } else {
+                    None
+                }
+            })
             .collect();
-        let not_playing: Vec<Rc<U>> = self.players.iter()
-            .filter_map(|p| return if !p.is_playing() { Some(p.clone()) } else { None} )
+        let not_playing: Vec<Rc<U>> = self
+            .players
+            .iter()
+            .filter_map(|p| {
+                if !p.is_playing() {
+                    Some(p.clone())
+                } else {
+                    None
+                }
+            })
             .collect();
         if playing.len() == 1 {
             return (Some(playing.get(0).unwrap().clone()), not_playing);

@@ -1,4 +1,4 @@
-use gdnative::Color;
+use gdnative::prelude::*;
 
 pub struct Consts {}
 
@@ -16,7 +16,7 @@ impl Consts {
 pub struct ContenderProperties {
     pub id: usize,
     pub color: Color,
-    pub bot: bool
+    pub bot: bool,
 }
 
 pub trait Contender {
@@ -46,5 +46,4 @@ pub struct CelestialProperties {
 
 pub trait Celestial {
     fn properties(&self) -> CelestialProperties;
-
 }

@@ -52,6 +52,7 @@ autostart = true
 [node name="OrbitersTimer" type="Timer" parent="."]
 wait_time = 0.1
 autostart = true
+
 [connection signal="body_entered" from="Area2D" to="." method="_on_ship_arrival"]
 [connection signal="input_event" from="Area2D" to="." method="_on_planet_gui_input"]
 [connection signal="timeout" from="Timer" to="." method="_on_resource_timer_timeout"]

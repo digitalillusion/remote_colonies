@@ -13,8 +13,9 @@ custom_integrator = true
 script = ExtResource( 2 )
 
 [node name="Sprite" type="Sprite" parent="."]
-rotation = 1.5607
-scale = Vector2( 0.038, 0.038 )
+position = Vector2( 0, -1.19209e-07 )
+rotation = 1.5708
+scale = Vector2( 0.08, 0.08 )
 texture = ExtResource( 1 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]

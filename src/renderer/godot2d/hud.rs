@@ -1,112 +1,118 @@
-use gdnative::*;
+use gdnative::prelude::*;
+use gdnative_bindings::HSlider;
 
-use std::cell::*;
+pub type RefHUDNode = Ref<Node2D>;
 
 #[derive(NativeClass)]
 #[inherit(Node2D)]
 #[user_data(user_data::LocalCellData<HUD>)]
 pub struct HUD {
-    owner: RefCell<Node2D>
+    owner: RefHUDNode,
 }
 
 #[methods]
 impl HUD {
-    
-    fn _init(owner: Node2D) -> Self {
+    fn new(owner: &Node2D) -> Self {
+        let owner = unsafe { owner.assume_unique() }.cast::<Node2D>().unwrap();
         HUD {
-            owner: RefCell::new(owner)
+            owner: owner.into_shared(),
         }
     }
-    
-    #[export]
-    unsafe fn _ready(&self, owner: Node2D) {
-        let mut ais_slider: HSlider = owner
-            .get_node(NodePath::from_str("AisSlider"))
-            .expect("Unable to find hud/AisSlider")
-            .cast()
-            .expect("Unable to cast to HSlider");
+
+    #[method]
+    fn _ready(&self, #[base] owner: &Node2D) {
+        let ais_slider = unsafe {
+            owner
+                .get_node_as::<HSlider>("AisSlider")
+                .expect("Cannot resolve AisSlider")
+        };
         ais_slider.set_value(1.0);
 
-        let mut planets_slider: HSlider = owner
-            .get_node(NodePath::from_str("PlanetsSlider"))
-            .expect("Unable to find hud/PlanetsSlider")
-            .cast()
-            .expect("Unable to cast to HSlider");
+        let planets_slider = unsafe {
+            owner
+                .get_node_as::<HSlider>("PlanetsSlider")
+                .expect("Cannot resolve PlanetsSlider")
+        };
         planets_slider.set_value(10.0);
     }
 
-    #[export]
-    pub unsafe fn _on_hud_ais_slider_change(&self, owner: Node2D, value: f64) {
-        let mut planets_slider: HSlider = owner
-            .get_node(NodePath::from_str("PlanetsSlider"))
-            .expect("Unable to find hud/PlanetsSlider")
-            .cast()
-            .expect("Unable to cast to HSlider");
-        
-        if planets_slider.get_value() < value + 1.0 {          
-            planets_slider.set_value(value as f64);
+    #[method]
+    pub fn _on_hud_ais_slider_change(&self, #[base] owner: &Node2D, value: f64) {
+        let planets_slider = unsafe {
+            owner
+                .get_node_as::<HSlider>("PlanetsSlider")
+                .expect("Cannot resolve PlanetsSlider")
+        };
+
+        if planets_slider.value() < value + 1.0 {
+            planets_slider.set_value(value + 1.0);
         }
     }
 
-    #[export]
-    pub unsafe fn _on_hud_planets_slider_change(&self, owner: Node2D, value: f64) {
-        let mut ais_slider: HSlider = owner
-            .get_node(NodePath::from_str("AisSlider"))
-            .expect("Unable to find hud/AisSlider")
-            .cast()
-            .expect("Unable to cast to HSlider");
-        
-        if ais_slider.get_value() + 1.0 > value {          
-            ais_slider.set_value(value as f64);
+    #[method]
+    pub fn _on_hud_planets_slider_change(&self, #[base] owner: &Node2D, value: f64) {
+        let ais_slider = unsafe {
+            owner
+                .get_node_as::<HSlider>("AisSlider")
+                .expect("Cannot resolve AisSlider")
+        };
+
+        if ais_slider.value() + 1.0 > value {
+            ais_slider.set_value(value);
         }
     }
 
-    #[export]
-    pub unsafe fn _on_start_button_up(&self, mut owner: Node2D) {
-        let ais_slider: HSlider = owner
-            .get_node(NodePath::from_str("AisSlider"))
-            .expect("Unable to find hud/AisSlider")
-            .cast()
-            .expect("Unable to cast to HSlider");
-        let planets_slider: HSlider = owner
-            .get_node(NodePath::from_str("PlanetsSlider"))
-            .expect("Unable to find hud/PlanetsSlider")
-            .cast()
-            .expect("Unable to cast to HSlider");
+    #[method]
+    pub fn _on_start_button_up(&self, #[base] owner: &Node2D) {
+        let ais_slider = unsafe {
+            owner
+                .get_node_as::<HSlider>("AisSlider")
+                .expect("Cannot resolve AisSlider")
+        };
+        let planets_slider = unsafe {
+            owner
+                .get_node_as::<HSlider>("PlanetsSlider")
+                .expect("Cannot resolve PlanetsSlider")
+        };
 
         owner.hide();
-        owner.get_parent().unwrap().emit_signal("start_game".into(), &[
-            Variant::from_u64(ais_slider.get_value() as u64),
-            Variant::from_u64(planets_slider.get_value() as u64),
-            Variant::from_bool(false),
-        ]);
+
+        let root_node = unsafe { owner.get_parent().unwrap().assume_safe() }.as_ref();
+        root_node.emit_signal(
+            "start_game",
+            &[
+                Variant::new(ais_slider.value() as u64),
+                Variant::new(planets_slider.value() as u64),
+                Variant::new(false),
+            ],
+        );
     }
 
-    pub unsafe fn game_over(&self, win: bool) {
-        let mut owner = self.owner.borrow_mut();
+    pub fn game_over(&self, win: bool) {
+        let owner = unsafe { self.owner.assume_safe() }.as_ref();
         owner.show();
 
-        let mut title_label: Label = owner
-            .get_node(NodePath::from_str("Title"))
-            .expect("Unable to find hud/Title")
-            .cast()
-            .expect("Unable to cast to Label");
-        title_label.set_text(if win { "You win".into() } else { "You lose".into() })
+        let title_label = unsafe {
+            owner
+                .get_node_as::<Label>("Title")
+                .expect("Cannot resolve Title")
+        };
+        title_label.set_text(if win { "You win" } else { "You lose" })
     }
 
-    pub unsafe fn with_mut<F, T>(node: Node2D, mut with_fn: F) -> T
+    pub fn with_mut<F, T>(base: &RefHUDNode, mut with_fn: F) -> T
     where
-        F: FnMut(&mut HUD) -> T
+        F: FnMut(&mut HUD) -> T,
     {
-        let instance = Instance::<HUD>::try_from_base(node).unwrap();
+        let instance = unsafe { base.assume_safe() }.cast_instance().unwrap();
         instance.map_mut(|class, _owner| with_fn(class)).unwrap()
     }
 
-    pub unsafe fn with<F, T>(node: Node2D, with_fn: F) -> T
+    pub fn with<F, T>(base: &RefHUDNode, with_fn: F) -> T
     where
-        F: Fn(&HUD) -> T
+        F: Fn(&HUD) -> T,
     {
-        let instance = Instance::<HUD>::try_from_base(node).unwrap();
+        let instance = unsafe { base.assume_safe() }.cast_instance().unwrap();
         instance.map(|class, _owner| with_fn(class)).unwrap()
     }
 }

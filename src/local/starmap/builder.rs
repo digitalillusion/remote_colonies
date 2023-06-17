@@ -1,13 +1,11 @@
-use std::rc::Rc;
-
 use super::Starmap;
 
 pub struct StarmapBuilder<T, U, F, G, H>
-where 
+where
     U: Starmap<CelestialType = T>,
     F: FnMut(usize) -> T,
     G: Fn(&T, &T) -> bool,
-    H: Fn(&T) -> ()
+    H: Fn(&T),
 {
     count: usize,
     generator: Option<F>,
@@ -16,12 +14,12 @@ where
     target: U,
 }
 
-impl <T, U, F, G, H> StarmapBuilder<T, U, F, G, H>   
-where 
+impl<T, U, F, G, H> StarmapBuilder<T, U, F, G, H>
+where
     U: Starmap<CelestialType = T>,
     F: FnMut(usize) -> T,
     G: Fn(&T, &T) -> bool,
-    H: Fn(&T) -> ()
+    H: Fn(&T),
 {
     pub fn new(count: usize, target: U) -> StarmapBuilder<T, U, F, G, H> {
         StarmapBuilder {
@@ -29,7 +27,7 @@ where
             count,
             generator: None,
             validator: None,
-            cleaner: None
+            cleaner: None,
         }
     }
 
@@ -52,7 +50,7 @@ where
         }
     }
     pub fn build(mut self) -> U {
-        let mut planets: Vec<Rc<T>> = vec!();
+        let mut planets: Vec<T> = vec![];
         let mut planets_invalid_indexes: Vec<usize> = (0..self.count).rev().collect();
 
         let mut generator = self.generator.unwrap();
@@ -63,26 +61,31 @@ where
             planets_invalid_indexes.reverse();
             for i in &planets_invalid_indexes {
                 let planet_id = *i;
-                let planet = Rc::new(generator(planet_id));
+                let planet = generator(planet_id);
                 planets.insert(*i, planet);
             }
 
-            'remove_invalid : for i in planets_invalid_indexes.clone() {
+            'remove_invalid: for i in planets_invalid_indexes.clone() {
                 for j in 0..planets.len() {
                     if j != i && !validator(&planets[i], &planets[j]) {
                         break 'remove_invalid;
                     }
                 }
-                let remove_index = planets_invalid_indexes.iter().position(|pii|  pii == &i).unwrap();
+                let remove_index = planets_invalid_indexes
+                    .iter()
+                    .position(|pii| pii == &i)
+                    .unwrap();
                 planets_invalid_indexes.remove(remove_index);
             }
 
             planets_invalid_indexes.sort_unstable();
             planets_invalid_indexes.reverse();
-            planets_invalid_indexes.iter().for_each(|planet_invalid_index| {
-                let planet_invalid = planets.remove(*planet_invalid_index);
-                cleaner(&planet_invalid);
-            });
+            planets_invalid_indexes
+                .iter()
+                .for_each(|planet_invalid_index| {
+                    let planet_invalid = planets.remove(*planet_invalid_index);
+                    cleaner(&planet_invalid);
+                });
         }
 
         self.target.set_planets(planets);

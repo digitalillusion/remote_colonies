@@ -1,4 +1,3 @@
-#![feature(clamp)]
 #![feature(associated_type_bounds)]
 
 //! # `remote_colonies` modules
@@ -8,14 +7,14 @@
 pub mod local;
 pub mod renderer;
 
-use gdnative::*;
+use gdnative::init::*;
 
-use crate::renderer::godot2d::Main;
 use crate::renderer::godot2d::hud::HUD;
 use crate::renderer::godot2d::planet::Planet;
 use crate::renderer::godot2d::ship::Ship;
+use crate::renderer::godot2d::Main;
 
-fn init(handle: gdnative::init::InitHandle) {
+fn init(handle: InitHandle) {
     handle.add_class::<Planet>();
     handle.add_class::<Ship>();
     handle.add_class::<HUD>();

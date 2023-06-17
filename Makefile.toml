@@ -1,0 +1,17 @@
+[tasks.replace-debug-library]
+script = "find ./ -name '*.gdns' -exec sed -i 's|res://remote_colonies_library.gdnlib|res://remote_colonies_library_debug.gdnlib|g' {} +"
+
+[tasks.replace-release-library]
+script = "find ./ -name '*.gdns' -exec sed -i 's|res://remote_colonies_library_debug.gdnlib|res://remote_colonies_library.gdnlib|g' {} +"
+
+[tasks.debug-godot]
+description = "Builds the debug bindings to run in Godot engine"
+command = "cargo"
+dependencies = ["format", "replace-debug-library"]
+args = ["build", "--all-features"]
+
+[tasks.release-godot]
+description = "Builds the release bindings to run in Godot engine"
+command = "cargo"
+dependencies = ["format", "replace-release-library"]
+args = ["build", "--release", "--all-features"]

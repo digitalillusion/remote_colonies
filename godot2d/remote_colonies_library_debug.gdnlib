@@ -1,0 +1,17 @@
+[entry]
+
+X11.64="res://../target/debug/libremote_colonies.so"
+OSX.64="res://../target/debug/libremote_colonies.dylib"
+Windows.64="res://../target/debug/remote_colonies.dll"
+
+[dependencies]
+
+X11.64=[  ]
+OSX.64=[  ]
+
+[general]
+
+singleton=false
+load_once=true
+symbol_prefix="godot_"
+reloadable=true

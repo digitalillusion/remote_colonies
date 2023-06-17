@@ -8,6 +8,17 @@ edition = "2018"
 crate-type = ["cdylib"]
 
 [dependencies]
-gdnative = "0.8.1"
-rand = "0.7.3"
+gdnative = "0.11.3"
+gdnative-bindings = "0.11.3"
+rand = "0.8.5"
 mcts = "0.3.0"
+
+[profile.release]
+opt-level = 1
+
+[target.wasm32-unknown-emscripten]
+rustflags = [
+    "-Clink-arg=-sSIDE_MODULE=2", # build a side module that Godot can load
+    "-Zlink-native-libraries=no", # workaround for a wasm-ld error during linking
+    "-Cpanic=abort", # workaround for a runtime error related to dyncalls
+]
