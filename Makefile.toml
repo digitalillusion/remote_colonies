@@ -4,6 +4,12 @@ script = "find ./ -name '*.gdns' -exec sed -i 's|res://remote_colonies_library.g
 [tasks.replace-release-library]
 script = "find ./ -name '*.gdns' -exec sed -i 's|res://remote_colonies_library_debug.gdnlib|res://remote_colonies_library.gdnlib|g' {} +"
 
+[tasks.prepare-release-html5]
+script = '''
+export C_INCLUDE_PATH=$EMSDK/upstream/emscripten/cache/sysroot/include
+rustup default nightly-2023-01-27
+'''
+
 [tasks.debug-godot]
 description = "Builds the debug bindings to run in Godot engine"
 command = "cargo"
@@ -15,3 +21,9 @@ description = "Builds the release bindings to run in Godot engine"
 command = "cargo"
 dependencies = ["format", "replace-release-library"]
 args = ["build", "--release", "--all-features"]
+
+[tasks.release-html5]
+description = "Builds the release bindings to export from Godot engine to HTML5"
+command = "cargo"
+dependencies = ["format", "replace-release-library", "prepare-release-html5"]
+args = ["build", "--target", "wasm32-unknown-emscripten", "--release", "--all-features"]

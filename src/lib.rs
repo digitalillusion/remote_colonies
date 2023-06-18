@@ -1,5 +1,3 @@
-#![feature(associated_type_bounds)]
-
 //! # `remote_colonies` modules
 //!
 //! * `local` is the module that contains the game local logic

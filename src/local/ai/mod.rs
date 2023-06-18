@@ -1,12 +1,14 @@
-mod mcst;
+mod evaluator;
+mod mcts;
 
+use crate::local::Difficulty;
 use mcts::transposition_table::*;
 use mcts::tree_policy::UCTPolicy;
-use mcts::*;
+use mcts::{GameState, MctsManager};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
-use self::mcst::*;
+use self::evaluator::*;
 use super::model::*;
 use super::planet::PlanetBusiness;
 use super::player::*;
@@ -40,11 +42,15 @@ impl Metrics {
         let planets_ratio = self.planets_ratio as f32 * 0.01;
         let ships_count_ratio = self.ships_count_ratio as f32 * 0.01;
 
-        let strat_more_ships_when_disadvantage = ships_count * (1.0 - ships_count_ratio);
+        let strat_more_ships_when_disadvantage =
+            10.0f32.powf(ships_count) * (1.0 - ships_count_ratio);
         let strat_more_conquer_planet_when_advantage =
-            planets_ratio * 10.0f32.powf(ships_count_ratio);
-        let benefit = strat_more_ships_when_disadvantage * strat_more_conquer_planet_when_advantage
-            / 1.000001f32.powf(extracted);
+            10.0f32.powf(planets_ratio) * ships_count_ratio;
+        let handicap_wait_instead_of_consuming_extracted =
+            planets_ratio * ships_count_ratio / 1.00001f32.powf(extracted);
+        let benefit = strat_more_ships_when_disadvantage
+            * strat_more_conquer_planet_when_advantage
+            * handicap_wait_instead_of_consuming_extracted;
         (100.0 * benefit).round() as i64
     }
 }
@@ -52,14 +58,13 @@ impl Metrics {
 #[derive(Clone, Debug)]
 pub struct AiState {
     player: ContenderProperties,
-
     metrics: Metrics,
-
     measures: Vec<Measure>,
+    difficulty: Difficulty,
 }
 
 impl AiState {
-    pub fn new(player: ContenderProperties) -> Self {
+    pub fn new(player: ContenderProperties, difficulty: Difficulty) -> Self {
         AiState {
             player,
             metrics: Metrics {
@@ -69,6 +74,7 @@ impl AiState {
                 planets_ratio: 0,
             },
             measures: vec![],
+            difficulty,
         }
     }
 
@@ -77,41 +83,70 @@ impl AiState {
     }
 
     pub fn get_best_move(&self) -> PlayerAction {
-        let mut mcts = MCTSManager::new(
+        let mut mcts = MctsManager::new(
             self.clone(),
-            MyMCTS,
+            MyMcts,
             MyEvaluator,
-            UCTPolicy::new(0.5),
-            ApproxTable::new(1024),
+            UCTPolicy::new(match &self.difficulty {
+                Difficulty::Easy => 0.2,
+                Difficulty::Medium => 0.6,
+                Difficulty::Hard => 1.0,
+            }),
+            ApproxTable::new(2048),
         );
-        mcts.playout_n_parallel(100, 4);
-        mcts.best_move().unwrap()
+        mcts.playout_n(512);
+        mcts.best_move().unwrap_or(PlayerAction::Wait)
     }
 
     pub fn refresh_measures(
         &mut self,
         planet_distances: &[Vec<f32>],
+        players: &[ContenderProperties],
         ships_by_player_by_planet: Vec<(CelestialProperties, Vec<ContenderVessels>)>,
     ) {
         let measures = ships_by_player_by_planet.to_vec();
         self.measures = measures
             .iter()
             .enumerate()
-            .map(|(planet_id, (planet, ships_by_player))| Measure {
-                planet_props: *planet,
-                distances: planet_distances.get(planet_id).unwrap().to_vec(),
-                distance: f32::INFINITY,
-                ships_by_player: ships_by_player.to_vec(),
-                extracted: planet.extracted,
-                ships_count: ships_by_player
-                    .iter()
-                    .fold(0, |acc, (_, ships)| acc + ships.len()),
-                allied_ships_count: ships_by_player.iter().fold(0, |acc, (player, ships)| {
-                    if player.id == self.player.id {
-                        return acc + ships.len();
-                    }
-                    acc
-                }),
+            .map(|(planet_id, (planet, ships_by_player))| {
+                let ships_by_player =
+                    if planet.contender_id == usize::MAX || planet.contender_id == self.player.id {
+                        ships_by_player.clone()
+                    } else {
+                        let enemy_ships_from_extracted = (0..(planet.extracted as usize))
+                            .step_by(Consts::ADD_SHIP_RESOURCE_COST as usize)
+                            .map(|_| VesselProperties {
+                                id: usize::MAX,
+                                contender_id: planet.contender_id,
+                                celestial_id: planet_id,
+                            })
+                            .collect();
+                        let enemy_ships_from_extracted = [(
+                            *players
+                                .iter()
+                                .find(|player| player.id == planet.contender_id)
+                                .unwrap(),
+                            enemy_ships_from_extracted,
+                        )]
+                        .to_vec();
+                        [ships_by_player.clone(), enemy_ships_from_extracted].concat()
+                    };
+                Measure {
+                    planet_props: *planet,
+                    distances: planet_distances.get(planet_id).unwrap().to_vec(),
+                    distance: f32::INFINITY,
+                    ships_by_player: ships_by_player.clone(),
+                    extracted: planet.extracted,
+                    ships_count: ships_by_player
+                        .iter()
+                        .fold(0, |acc, (_, ships)| acc + ships.len()),
+                    allied_ships_count: ships_by_player.iter().fold(0, |acc, (player, ships)| {
+                        if player.id == self.player.id {
+                            return acc + ships.len();
+                        }
+                        acc
+                    }),
+                }
             })
             .collect();
     }
@@ -154,7 +189,7 @@ impl AiState {
                         return acc + ships.len();
                     }
                     acc
-                });
+                }) - count;
             to.ships_count = to
                 .ships_by_player
                 .iter()
@@ -171,7 +206,8 @@ impl AiState {
                 .count();
             if let Some(winner) = winner {
                 if winner.id == player_id {
-                    to.planet_props.contender_id = winner.id
+                    to.extracted += to.planet_props.extracted;
+                    to.planet_props.contender_id = winner.id;
                 }
             }
         }
@@ -187,7 +223,7 @@ impl GameState for AiState {
         self.player
     }
     fn available_moves(&self) -> Vec<PlayerAction> {
-        let mut moves = vec![PlayerAction::Wait];
+        let mut moves = vec![];
         let allied_planets: Vec<&Measure> = self
             .measures
             .iter()
@@ -199,15 +235,37 @@ impl GameState for AiState {
             .filter(|m| m.planet_props.contender_id != self.player.id)
             .collect();
 
-        allied_planets
+        if allied_planets
             .iter()
-            .for_each(|planet| moves.push(PlayerAction::AddShip(planet.planet_props)));
+            .all(|planet| planet.extracted < Consts::ADD_SHIP_RESOURCE_COST)
+        {
+            moves.push(PlayerAction::Wait);
+        }
+
+        allied_planets.iter().for_each(|planet| {
+            if planet.extracted > Consts::ADD_SHIP_RESOURCE_COST {
+                moves.push(PlayerAction::AddShip(planet.planet_props))
+            }
+        });
         for i in 0..allied_planets.len() {
             for j in (i + 1)..allied_planets.len() {
-                moves.push(PlayerAction::MoveShips(
-                    allied_planets[i].planet_props,
-                    allied_planets[j].planet_props,
-                ));
+                let available_ships_to_move: usize = allied_planets[i]
+                    .ships_by_player
+                    .iter()
+                    .filter_map(|(player, ships)| {
+                        if player.id == allied_planets[i].planet_props.contender_id {
+                            Some(ships.len())
+                        } else {
+                            None
+                        }
+                    })
+                    .sum();
+                if available_ships_to_move > 1 {
+                    moves.push(PlayerAction::MoveShips(
+                        allied_planets[i].planet_props,
+                        allied_planets[j].planet_props,
+                    ));
+                }
             }
         }
         for allied_planet in &allied_planets {

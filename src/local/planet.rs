@@ -44,17 +44,16 @@ impl PlanetBusiness {
         &self,
         ships_by_player: Vec<(ContenderProperties, Vec<VesselProperties>)>,
     ) -> (Option<ContenderProperties>, Vec<VesselProperties>) {
-        let total_ship_count: f32 = ships_by_player
-            .iter()
-            .map(|(_, ships)| ships.len() as f32)
-            .sum();
+        let total_ship_count: usize = ships_by_player.iter().map(|(_, ships)| ships.len()).sum();
         let ship_loss_probs: Vec<f32> = ships_by_player
             .iter()
             .map(|(_, ships)| {
-                if total_ship_count == 0.0 {
+                if total_ship_count == 0 {
                     return 0.0;
                 }
-                (total_ship_count - ships.len() as f32) / (total_ship_count * 100.0)
+                let fighting_time_factor = 0.002 * (1.0 - (-(total_ship_count as f32).ln()).exp());
+                1.0 - (-((total_ship_count - ships.len()) as f32 * fighting_time_factor + 1.0).ln())
+                    .exp()
             })
             .collect();
 

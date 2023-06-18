@@ -15,6 +15,7 @@ use crate::local::GameState;
 pub struct Game {
     players_count: usize,
     planets_count: usize,
+    difficulty: usize,
     demo: bool,
 }
 
@@ -24,14 +25,16 @@ impl Game {
             planets_count: 15,
             demo: true,
             players_count: 10,
+            difficulty: 2,
         }
     }
 
-    pub fn new(ais_count: usize, planets_count: usize) -> Self {
+    pub fn new(ais_count: usize, planets_count: usize, difficulty: usize) -> Self {
         Game {
             planets_count,
             demo: false,
             players_count: ais_count + 1,
+            difficulty,
         }
     }
 
@@ -45,6 +48,10 @@ impl Game {
 
     pub fn get_planets_count(&self) -> usize {
         self.planets_count
+    }
+
+    pub fn get_difficulty(&self) -> usize {
+        self.difficulty
     }
 
     pub fn start<F>(

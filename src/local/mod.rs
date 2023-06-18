@@ -11,6 +11,14 @@ use self::player::*;
 use self::starmap::Starmap;
 use crate::local::ai::*;
 use crate::local::model::*;
+use crate::local::Difficulty::Medium;
+
+#[derive(Debug, Copy, Clone)]
+pub enum Difficulty {
+    Easy,
+    Medium,
+    Hard,
+}
 
 pub struct GameState<T, U>
 where
@@ -20,6 +28,7 @@ where
     starmap: Option<T>,
     players: Vec<Rc<U>>,
     ais: Vec<AiState>,
+    difficulty: Difficulty,
     time: f64,
 }
 
@@ -33,6 +42,7 @@ where
             starmap: None,
             players: vec![],
             ais: vec![],
+            difficulty: Medium,
             time: 0.0,
         }
     }
@@ -51,6 +61,7 @@ where
         self.players.iter().for_each(|p| p.destroy());
         self.players.clear();
         self.ais.clear();
+        self.difficulty = Medium;
         if let Some(starmap) = &mut self.starmap {
             starmap.destroy();
         }
@@ -65,7 +76,7 @@ where
         self.players.push(player.clone());
         let player_props = player.properties();
         if player_props.bot {
-            self.ais.push(AiState::new(player_props));
+            self.ais.push(AiState::new(player_props, self.difficulty));
         }
     }
 
@@ -118,8 +129,17 @@ where
                 let ships_by_player = self.get_ships_by_player_on_planet(planet_props);
                 ships_by_player_by_planet.push((planet_props, ships_by_player));
             });
+        let player_properties: Vec<ContenderProperties> = self
+            .players
+            .iter()
+            .map(|player| player.properties())
+            .collect();
         self.ais.iter_mut().for_each(|ai| {
-            ai.refresh_measures(&planet_distances, ships_by_player_by_planet.to_vec());
+            ai.refresh_measures(
+                &planet_distances,
+                &player_properties,
+                ships_by_player_by_planet.to_vec(),
+            );
             let tuple = (ai.get_player(), ai.get_best_move());
             ai_moves.push(tuple);
         });

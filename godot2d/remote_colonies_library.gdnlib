@@ -3,6 +3,7 @@
 X11.64="res://../target/release/libremote_colonies.so"
 OSX.64="res://../target/release/libremote_colonies.dylib"
 Windows.64="res://../target/release/remote_colonies.dll"
+HTML5.wasm32="res://../target/wasm32-unknown-emscripten/release/remote_colonies.wasm"
 
 [dependencies]
 

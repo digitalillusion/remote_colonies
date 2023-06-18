@@ -186,22 +186,17 @@ impl Planet {
                 .unwrap();
             let winner_props = winner.properties();
             let winner_planet = unsafe { owner.assume_shared() };
-            if let Some(loser) = players
-                .iter()
-                .find(|player| player.properties().id == self.properties().contender_id)
-            {
-                if loser.properties().id != winner_props.id {
-                    loser.planets.borrow_mut().retain(|planet| {
-                        Planet::with(planet, |planet| {
-                            planet.properties().id != self.properties().id
-                        })
-                    });
-                    self.properties.borrow_mut().contender_id = winner_props.id;
-                    winner.planets.borrow_mut().push(winner_planet);
-                }
-            } else {
-                self.properties.borrow_mut().contender_id = winner_props.id;
-                winner.planets.borrow_mut().push(winner_planet);
+            self.properties.borrow_mut().contender_id = winner_props.id;
+            winner.planets.borrow_mut().push(winner_planet);
+            if let Some(loser) = players.iter().find(|player| {
+                player.properties().id == self.properties().contender_id
+                    && player.properties().id != winner_props.id
+            }) {
+                loser.planets.borrow_mut().retain(|planet| {
+                    Planet::with(planet, |planet| {
+                        planet.properties().id != self.properties().id
+                    })
+                });
             }
             let planet_sprite = unsafe {
                 self.owner
@@ -256,7 +251,7 @@ impl Planet {
             ship.orbit(ship_node_obj, props.id, self.owner, props.radius);
         });
 
-        game_state.add_player(Rc::new(player));
+        game_state.add_player(player.into());
     }
 
     pub fn move_ships(&self, percent: usize, player: &Player2D, destination: &RefPlanetNode2D) {

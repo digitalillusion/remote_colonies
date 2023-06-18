@@ -31,7 +31,7 @@ texture = ExtResource( 2 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]
 position = Vector2( -3.05176e-05, 0 )
-scale = Vector2( 4, 4 )
+scale = Vector2( 6.68, 6.68 )
 shape = SubResource( 1 )
 
 [node name="Label" type="Label" parent="."]
@@ -42,9 +42,6 @@ margin_bottom = 47.0539
 custom_fonts/font = SubResource( 3 )
 align = 1
 valign = 1
-__meta__ = {
-"_edit_use_anchors_": false
-}
 
 [node name="Timer" type="Timer" parent="."]
 autostart = true

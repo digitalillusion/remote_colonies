@@ -64,6 +64,7 @@ impl Main {
             .signal("start_game")
             .with_param_default("ais_count", 10.to_variant())
             .with_param_default("planets_count", 15.to_variant())
+            .with_param_default("difficulty", 2.to_variant())
             .with_param_default("demo", true.to_variant())
             .done();
     }
@@ -74,6 +75,7 @@ impl Main {
             owner,
             self.game.get_ais_count(),
             self.game.get_planets_count(),
+            self.game.get_difficulty(),
             self.game.is_demo(),
         );
 
@@ -98,6 +100,7 @@ impl Main {
                 owner,
                 self.game.get_ais_count(),
                 self.game.get_planets_count(),
+                self.game.get_difficulty(),
                 self.game.is_demo(),
             );
         } else if !self.game.is_demo() {
@@ -135,6 +138,7 @@ impl Main {
         #[base] owner: &Node,
         ais_count: usize,
         planets_count: usize,
+        difficulty: usize,
         demo: bool,
     ) {
         let background = unsafe {
@@ -155,7 +159,7 @@ impl Main {
         self.game = if demo {
             Game::demo()
         } else {
-            Game::new(ais_count, planets_count)
+            Game::new(ais_count, planets_count, difficulty)
         };
         let planet_create_fn = || {
             let planet_node: Ref<Node2D, _> = instance_scene(&self.planet);

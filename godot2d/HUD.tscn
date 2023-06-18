@@ -1,6 +1,6 @@
-[gd_scene load_steps=7 format=2]
+[gd_scene load_steps=6 format=2]
 
-[ext_resource path="res://art/pirulen.ttf" type="DynamicFontData" id=1]
+[ext_resource path="res://art/pirulen.tres" type="DynamicFontData" id=1]
 [ext_resource path="res://HUD.gdns" type="Script" id=2]
 
 [sub_resource type="DynamicFont" id=1]
@@ -14,21 +14,19 @@ outline_size = 2
 outline_color = Color( 0, 0, 0, 1 )
 font_data = ExtResource( 1 )
 
-[sub_resource type="DynamicFontData" id=3]
-font_path = "res://art/pirulen.ttf"
-
 [sub_resource type="DynamicFont" id=4]
-size = 30
-font_data = SubResource( 3 )
+size = 20
+font_data = ExtResource( 1 )
 
 [node name="Node2D" type="Node2D"]
 z_index = 100
 script = ExtResource( 2 )
 
 [node name="Polygon2D" type="Polygon2D" parent="."]
-position = Vector2( 3.3941, 0 )
+position = Vector2( -155.563, -5.22514 )
+scale = Vector2( 1.32165, 3.87517 )
 color = Color( 0, 0, 0, 0.607843 )
-polygon = PoolVector2Array( -15.5826, -12.7395, 1030.04, -11.7077, 1033.18, 616.045, -14.725, 618.138 )
+polygon = PoolVector2Array( -38.5948, -34.1252, 1034.15, -36.0693, 1036.08, 308.046, 1033.18, 616.045, 504.571, 617.101, -34.7291, 622.998 )
 
 [node name="Title" type="Label" parent="."]
 margin_left = 1.0
@@ -43,10 +41,10 @@ valign = 1
 
 [node name="AisSlider" type="HSlider" parent="."]
 margin_left = 460.2
-margin_top = 231.2
+margin_top = 158.401
 margin_right = 817.2
-margin_bottom = 279.2
-rect_pivot_offset = Vector2( -144.005, 48 )
+margin_bottom = 206.401
+rect_pivot_offset = Vector2( 189.8, 27.599 )
 min_value = 1.0
 max_value = 10.0
 value = 1.0
@@ -57,9 +55,9 @@ __meta__ = {
 
 [node name="Label2" type="Label" parent="."]
 margin_left = 164.799
-margin_top = 212.799
+margin_top = 140.0
 margin_right = 438.799
-margin_bottom = 298.799
+margin_bottom = 226.0
 rect_pivot_offset = Vector2( 295.401, 88.8 )
 custom_fonts/font = SubResource( 2 )
 text = "Number of ai players"
@@ -70,9 +68,9 @@ __meta__ = {
 
 [node name="Label4" type="Label" parent="."]
 margin_left = 456.252
-margin_top = 258.81
+margin_top = 186.011
 margin_right = 826.252
-margin_bottom = 285.81
+margin_bottom = 213.011
 rect_pivot_offset = Vector2( 295.401, 88.8 )
 custom_fonts/font = SubResource( 2 )
 text = " 1                  5                      10"
@@ -83,9 +81,9 @@ __meta__ = {
 
 [node name="PlanetsSlider" type="HSlider" parent="."]
 margin_left = 460.2
-margin_top = 301.599
+margin_top = 228.8
 margin_right = 817.2
-margin_bottom = 349.599
+margin_bottom = 276.8
 rect_pivot_offset = Vector2( -144.005, 48 )
 min_value = 2.0
 max_value = 20.0
@@ -97,22 +95,19 @@ __meta__ = {
 
 [node name="Label3" type="Label" parent="."]
 margin_left = 164.799
-margin_top = 283.198
+margin_top = 210.399
 margin_right = 438.799
-margin_bottom = 369.198
-rect_pivot_offset = Vector2( 151.396, 68.0009 )
+margin_bottom = 296.399
+rect_pivot_offset = Vector2( 53.201, 42.601 )
 custom_fonts/font = SubResource( 2 )
 text = "Number of planets"
 valign = 1
-__meta__ = {
-"_edit_use_anchors_": false
-}
 
 [node name="Label5" type="Label" parent="."]
 margin_left = 456.818
-margin_top = 334.045
-margin_right = 826.818
-margin_bottom = 361.045
+margin_top = 261.246
+margin_right = 828.818
+margin_bottom = 288.246
 rect_pivot_offset = Vector2( 295.401, 88.8 )
 custom_fonts/font = SubResource( 2 )
 text = " 2                 10                     20"
@@ -128,6 +123,37 @@ margin_right = 626.798
 margin_bottom = 485.398
 custom_fonts/font = SubResource( 4 )
 text = "Start"
+
+[node name="Label6" type="Label" parent="."]
+margin_left = 164.0
+margin_top = 282.0
+margin_right = 438.0
+margin_bottom = 368.0
+rect_pivot_offset = Vector2( 53.201, 42.601 )
+custom_fonts/font = SubResource( 2 )
+text = "Difficulty"
+valign = 1
+
+[node name="DifficultySlider" type="HSlider" parent="."]
+margin_left = 462.0
+margin_top = 298.0
+margin_right = 819.0
+margin_bottom = 346.0
+rect_pivot_offset = Vector2( 189.8, 27.599 )
+min_value = 1.0
+max_value = 3.0
+value = 2.0
+tick_count = 3
+
+[node name="Label7" type="Label" parent="."]
+margin_left = 458.0
+margin_top = 331.0
+margin_right = 828.0
+margin_bottom = 358.0
+rect_pivot_offset = Vector2( 295.401, 88.8 )
+custom_fonts/font = SubResource( 2 )
+text = "Easy          Medium          Hard"
+valign = 1
 
 [connection signal="value_changed" from="AisSlider" to="." method="_on_hud_ais_slider_change"]
 [connection signal="value_changed" from="PlanetsSlider" to="." method="_on_hud_planets_slider_change"]

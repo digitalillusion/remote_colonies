@@ -57,8 +57,8 @@ impl HUD {
                 .expect("Cannot resolve AisSlider")
         };
 
-        if ais_slider.value() + 1.0 > value {
-            ais_slider.set_value(value);
+        if ais_slider.value() > value - 1.0 {
+            ais_slider.set_value(value - 1.0);
         }
     }
 
@@ -74,6 +74,11 @@ impl HUD {
                 .get_node_as::<HSlider>("PlanetsSlider")
                 .expect("Cannot resolve PlanetsSlider")
         };
+        let difficulty_slider = unsafe {
+            owner
+                .get_node_as::<HSlider>("DifficultySlider")
+                .expect("Cannot resolve DifficultySlider")
+        };
 
         owner.hide();
 
@@ -83,6 +88,7 @@ impl HUD {
             &[
                 Variant::new(ais_slider.value() as u64),
                 Variant::new(planets_slider.value() as u64),
+                Variant::new(difficulty_slider.value() as u64),
                 Variant::new(false),
             ],
         );
