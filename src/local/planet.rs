@@ -51,7 +51,7 @@ impl PlanetBusiness {
                 if total_ship_count == 0 {
                     return 0.0;
                 }
-                let fighting_time_factor = 0.002 * (1.0 - (-(total_ship_count as f32).ln()).exp());
+                let fighting_time_factor = 0.005 * (1.0 - (-(total_ship_count as f32).ln()).exp());
                 1.0 - (-((total_ship_count - ships.len()) as f32 * fighting_time_factor + 1.0).ln())
                     .exp()
             })

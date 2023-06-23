@@ -28,7 +28,8 @@ struct Measure {
 
 #[derive(Clone, Debug, Hash)]
 struct Metrics {
-    extracted: i64,
+    enemy_extracted: i64,
+    allied_extracted: i64,
     ships_count: i64,
     ships_count_ratio: i64,
     planets_ratio: i64,
@@ -36,7 +37,8 @@ struct Metrics {
 
 impl Metrics {
     pub fn evaluate(&self) -> i64 {
-        let extracted = self.extracted as f32;
+        let allied_extracted = self.allied_extracted as f32;
+        let enemy_extracted = self.enemy_extracted as f32;
         let ships_count = self.ships_count as f32;
 
         let planets_ratio = self.planets_ratio as f32 * 0.01;
@@ -46,11 +48,12 @@ impl Metrics {
             10.0f32.powf(ships_count) * (1.0 - ships_count_ratio);
         let strat_more_conquer_planet_when_advantage =
             10.0f32.powf(planets_ratio) * ships_count_ratio;
-        let handicap_wait_instead_of_consuming_extracted =
-            planets_ratio * ships_count_ratio / 1.00001f32.powf(extracted);
+        let strat_consume_own_and_conquer_most_extracted =
+            planets_ratio * ships_count_ratio * 10.0f32.powf(enemy_extracted)
+                / 1.0001f32.powf(allied_extracted);
         let benefit = strat_more_ships_when_disadvantage
             * strat_more_conquer_planet_when_advantage
-            * handicap_wait_instead_of_consuming_extracted;
+            * strat_consume_own_and_conquer_most_extracted;
         (100.0 * benefit).round() as i64
     }
 }
@@ -68,7 +71,8 @@ impl AiState {
         AiState {
             player,
             metrics: Metrics {
-                extracted: 0,
+                enemy_extracted: 0,
+                allied_extracted: 0,
                 ships_count: 0,
                 ships_count_ratio: 0,
                 planets_ratio: 0,
@@ -206,7 +210,6 @@ impl AiState {
                 .count();
             if let Some(winner) = winner {
                 if winner.id == player_id {
-                    to.extracted += to.planet_props.extracted;
                     to.planet_props.contender_id = winner.id;
                 }
             }
@@ -249,7 +252,7 @@ impl GameState for AiState {
         });
         for i in 0..allied_planets.len() {
             for j in (i + 1)..allied_planets.len() {
-                let available_ships_to_move: usize = allied_planets[i]
+                let allied_ships_on_planet: usize = allied_planets[i]
                     .ships_by_player
                     .iter()
                     .filter_map(|(player, ships)| {
@@ -260,7 +263,19 @@ impl GameState for AiState {
                         }
                     })
                     .sum();
-                if available_ships_to_move > 1 {
+                let enemy_ships_on_planet: usize = allied_planets[i]
+                    .ships_by_player
+                    .iter()
+                    .filter_map(|(player, ships)| {
+                        if player.id != allied_planets[i].planet_props.contender_id {
+                            Some(ships.len())
+                        } else {
+                            None
+                        }
+                    })
+                    .sum();
+                if allied_ships_on_planet > 1 && enemy_ships_on_planet < 2 * allied_ships_on_planet
+                {
                     moves.push(PlayerAction::MoveShips(
                         allied_planets[i].planet_props,
                         allied_planets[j].planet_props,
@@ -288,7 +303,7 @@ impl GameState for AiState {
                     .find(|m| m.planet_props.id == on.id)
                     .unwrap();
                 measure.extracted -= Consts::ADD_SHIP_RESOURCE_COST;
-                measure.distance = 0.0;
+                measure.distance = 0.1;
                 measure.ships_count += 1;
                 measure.allied_ships_count += 1;
             }
@@ -329,21 +344,30 @@ impl GameState for AiState {
             .iter()
             .filter(|m| m.planet_props.contender_id == self.player.id)
             .collect();
+        let enemy_measures: Vec<&Measure> = measures
+            .iter()
+            .filter(|m| m.planet_props.contender_id != self.player.id)
+            .collect();
 
         let allied_extracted = allied_measures
             .iter()
-            .map(|m| m.extracted)
+            .map(|m| m.extracted as f32)
+            .fold(0.0, |acc, r| acc + r.floor());
+        let enemy_extracted = enemy_measures
+            .iter()
+            .map(|m| (m.planet_props.extracted + m.planet_props.resources) / m.distance)
             .fold(0.0, |acc, r| acc + r.floor());
         let allied_ships_count = measures
             .iter()
-            .map(|m| m.allied_ships_count)
-            .fold(0.0, |acc, s| acc + s as f32);
+            .map(|m| m.allied_ships_count as f32)
+            .fold(0.0, |acc, s| acc + s);
         let total_ships_count = measures
             .iter()
             .map(|m| m.ships_count)
             .fold(0.0, |acc, s| acc + s as f32);
         self.metrics = Metrics {
-            extracted: allied_extracted.floor() as i64,
+            allied_extracted: allied_extracted.floor() as i64,
+            enemy_extracted: enemy_extracted.floor() as i64,
             ships_count: allied_ships_count.floor() as i64,
             ships_count_ratio: (100.0 * allied_ships_count / total_ships_count).floor() as i64,
             planets_ratio: (100.0 * allied_measures.len() as f32 / measures.len() as f32) as i64,
