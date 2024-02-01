@@ -1,8 +1,9 @@
-[gd_scene load_steps=7 format=2]
+[gd_scene load_steps=8 format=2]
 
 [ext_resource path="res://Planet.gdns" type="Script" id=1]
 [ext_resource path="res://art/planet.png" type="Texture" id=2]
 [ext_resource path="res://Ship.tscn" type="PackedScene" id=3]
+[ext_resource path="res://art/killship.mp3" type="AudioStream" id=5]
 
 [sub_resource type="CircleShape2D" id=1]
 radius = 11.1133
@@ -49,6 +50,10 @@ autostart = true
 [node name="OrbitersTimer" type="Timer" parent="."]
 wait_time = 0.1
 autostart = true
+
+[node name="KillShip" type="AudioStreamPlayer" parent="."]
+stream = ExtResource( 5 )
+volume_db = -10.357
 
 [connection signal="body_entered" from="Area2D" to="." method="_on_ship_arrival"]
 [connection signal="input_event" from="Area2D" to="." method="_on_planet_gui_input"]

@@ -106,6 +106,7 @@ impl Main {
         } else if !self.game.is_demo() {
             let game_state = self.game_state.borrow();
             let current_player = game_state.get_current_player().unwrap();
+
             if losers
                 .iter()
                 .any(|l| l.properties().id == current_player.properties().id)

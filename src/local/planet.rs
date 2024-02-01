@@ -80,7 +80,7 @@ impl PlanetBusiness {
                     .iter()
                     .filter(|c| c.contender_id == player.id)
                     .count();
-                if ships.len() - player_casualties > 0 {
+                if ships.len().saturating_sub(player_casualties) > 0 {
                     return Some(*player);
                 }
                 None

@@ -158,6 +158,16 @@ impl Planet {
         let ships_by_player_on_planet = game_state.get_ships_by_player_on_planet(self.properties());
         let (winner, casualties) = self.business.battle(ships_by_player_on_planet);
 
+        if !casualties.is_empty() {
+            let kill_ship = unsafe {
+                self.owner
+                    .assume_safe()
+                    .get_node_as::<AudioStreamPlayer>("KillShip")
+                    .expect("Cannot resolve AddShip")
+            };
+            kill_ship.play(0.0);
+        }
+
         for casualty in casualties {
             if let Some(casualty_player) = players
                 .iter()
@@ -215,6 +225,19 @@ impl Planet {
             .business
             .can_add_ship(&mut props, player.properties(), resources_cost)
         {
+            let add_ship = unsafe {
+                self.owner
+                    .assume_safe()
+                    .get_parent()
+                    .expect("Cannot resolve Planet parent")
+                    .assume_safe()
+                    .get_node_as::<AudioStreamPlayer>("AddShip")
+                    .expect("Cannot resolve AddShip")
+            };
+            if !add_ship.is_playing() {
+                add_ship.play(0.0);
+            }
+
             let ship_node: Ref<RigidBody2D, _> = instance_scene(&self.ship);
             let ship_node = ship_node.into_shared();
             let ship_node_obj: &RigidBody2D = unsafe { ship_node.assume_safe() }.as_ref();
@@ -277,35 +300,51 @@ impl Planet {
         let count: usize = self
             .business
             .count_ships_to_move(selected_ships.len(), percent);
-        let selected_ships = selected_ships.drain(0..count);
-        let root_node = unsafe { self.owner.assume_safe() }
-            .as_ref()
-            .get_parent()
-            .unwrap();
+        if count > 0 {
+            let move_ship = unsafe {
+                self.owner
+                    .assume_safe()
+                    .get_parent()
+                    .expect("Cannot resolve Planet parent")
+                    .assume_safe()
+                    .get_node_as::<AudioStreamPlayer>("MoveShip")
+                    .expect("Cannot resolve MoveShip")
+            };
+            if !move_ship.is_playing() {
+                move_ship.play(0.0);
+            }
 
-        for ship_node in selected_ships {
-            let ship_node_obj: &RigidBody2D =
-                unsafe { ship_node.assume_safe() }.as_ref().cast().unwrap();
-            Ship::with(&ship_node, |ship| ship.leave_orbit());
-
-            let position = ship_node_obj.global_position();
-            let parent_ref = unsafe { ship_node_obj.get_parent().unwrap().assume_safe() }.as_ref();
-            let ship_instance: TInstance<Ship> =
-                unsafe { ship_node.assume_safe() }.cast_instance().unwrap();
-            parent_ref.remove_child(ship_instance.clone());
-
-            unsafe { root_node.assume_safe() }
+            let selected_ships = selected_ships.drain(0..count);
+            let root_node = unsafe { self.owner.assume_safe() }
                 .as_ref()
-                .add_child(ship_instance, false);
-            ship_node_obj.set_global_position(position);
+                .get_parent()
+                .unwrap();
 
-            let destination_obj = unsafe { destination.assume_safe() }.as_ref();
-            ship_node_obj.look_at(destination_obj.global_position());
-            ship_node_obj.set_linear_velocity(
-                (destination_obj.global_position() - position).normalized()
-                    * 10.0
-                    * Consts::MOVE_SHIP_SPEED_MULT,
-            );
+            for ship_node in selected_ships {
+                let ship_node_obj: &RigidBody2D =
+                    unsafe { ship_node.assume_safe() }.as_ref().cast().unwrap();
+                Ship::with(&ship_node, |ship| ship.leave_orbit());
+
+                let position = ship_node_obj.global_position();
+                let parent_ref =
+                    unsafe { ship_node_obj.get_parent().unwrap().assume_safe() }.as_ref();
+                let ship_instance: TInstance<Ship> =
+                    unsafe { ship_node.assume_safe() }.cast_instance().unwrap();
+                parent_ref.remove_child(ship_instance.clone());
+
+                unsafe { root_node.assume_safe() }
+                    .as_ref()
+                    .add_child(ship_instance, false);
+                ship_node_obj.set_global_position(position);
+
+                let destination_obj = unsafe { destination.assume_safe() }.as_ref();
+                ship_node_obj.look_at(destination_obj.global_position());
+                ship_node_obj.set_linear_velocity(
+                    (destination_obj.global_position() - position).normalized()
+                        * 10.0
+                        * Consts::MOVE_SHIP_SPEED_MULT,
+                );
+            }
         }
     }
 
@@ -340,7 +379,7 @@ impl Planet {
         let scale_vector = Vector2::new(scale, scale);
         planet_area.set_scale(scale_vector);
 
-        props.radius = 0.42 * scale * size;
+        props.radius = 0.45 * scale * size;
         let diameter = 2.0 * props.radius;
         let x_offset =
             (rng.gen_range(0.0..1.0) * viewport_width).clamp(diameter, viewport_width - diameter);

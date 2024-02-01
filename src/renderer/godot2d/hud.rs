@@ -1,5 +1,5 @@
 use gdnative::prelude::*;
-use gdnative_bindings::HSlider;
+use gdnative_bindings::{AudioStreamPlayer, HSlider};
 
 pub type RefHUDNode = Ref<Node2D>;
 
@@ -34,6 +34,13 @@ impl HUD {
                 .expect("Cannot resolve PlanetsSlider")
         };
         planets_slider.set_value(10.0);
+
+        let bgm_menu = unsafe {
+            owner
+                .get_node_as::<AudioStreamPlayer>("BgmMenu")
+                .expect("Cannot resolve BgmMenu")
+        };
+        bgm_menu.play(0.0);
     }
 
     #[method]
@@ -80,6 +87,20 @@ impl HUD {
                 .expect("Cannot resolve DifficultySlider")
         };
 
+        let bgm_menu = unsafe {
+            owner
+                .get_node_as::<AudioStreamPlayer>("BgmMenu")
+                .expect("Cannot resolve BgmMenu")
+        };
+        bgm_menu.stop();
+
+        let bgm = unsafe {
+            owner
+                .get_node_as::<AudioStreamPlayer>("Bgm")
+                .expect("Cannot resolve Bgm")
+        };
+        bgm.play(0.0);
+
         owner.hide();
 
         let root_node = unsafe { owner.get_parent().unwrap().assume_safe() }.as_ref();
@@ -103,7 +124,25 @@ impl HUD {
                 .get_node_as::<Label>("Title")
                 .expect("Cannot resolve Title")
         };
-        title_label.set_text(if win { "You win" } else { "You lose" })
+        title_label.set_text(if win { "You win" } else { "You lose" });
+
+        let bgm_menu = unsafe {
+            owner
+                .get_node_as::<AudioStreamPlayer>("BgmMenu")
+                .expect("Cannot resolve BgmMenu")
+        };
+        if !bgm_menu.is_playing() {
+            bgm_menu.play(0.0);
+        }
+
+        let bgm = unsafe {
+            owner
+                .get_node_as::<AudioStreamPlayer>("Bgm")
+                .expect("Cannot resolve Bgm")
+        };
+        if bgm.is_playing() {
+            bgm.stop();
+        }
     }
 
     pub fn with_mut<F, T>(base: &RefHUDNode, mut with_fn: F) -> T

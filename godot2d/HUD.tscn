@@ -1,7 +1,9 @@
-[gd_scene load_steps=6 format=2]
+[gd_scene load_steps=8 format=2]
 
 [ext_resource path="res://art/pirulen.tres" type="DynamicFontData" id=1]
 [ext_resource path="res://HUD.gdns" type="Script" id=2]
+[ext_resource path="res://art/bgmmenu.mp3" type="AudioStream" id=3]
+[ext_resource path="res://art/bgm.mp3" type="AudioStream" id=4]
 
 [sub_resource type="DynamicFont" id=1]
 size = 58
@@ -23,8 +25,8 @@ z_index = 100
 script = ExtResource( 2 )
 
 [node name="Polygon2D" type="Polygon2D" parent="."]
-position = Vector2( -155.563, -5.22514 )
-scale = Vector2( 1.32165, 3.87517 )
+position = Vector2( -1093.05, -701.467 )
+scale = Vector2( 5.62123, 5.9478 )
 color = Color( 0, 0, 0, 0.607843 )
 polygon = PoolVector2Array( -38.5948, -34.1252, 1034.15, -36.0693, 1036.08, 308.046, 1033.18, 616.045, 504.571, 617.101, -34.7291, 622.998 )
 
@@ -154,6 +156,12 @@ rect_pivot_offset = Vector2( 295.401, 88.8 )
 custom_fonts/font = SubResource( 2 )
 text = "Easy          Medium          Hard"
 valign = 1
+
+[node name="BgmMenu" type="AudioStreamPlayer" parent="."]
+stream = ExtResource( 3 )
+
+[node name="Bgm" type="AudioStreamPlayer" parent="."]
+stream = ExtResource( 4 )
 
 [connection signal="value_changed" from="AisSlider" to="." method="_on_hud_ais_slider_change"]
 [connection signal="value_changed" from="PlanetsSlider" to="." method="_on_hud_planets_slider_change"]

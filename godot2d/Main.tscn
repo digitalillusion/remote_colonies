@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=2]
+[gd_scene load_steps=12 format=2]
 
 [ext_resource path="res://Main.gdns" type="Script" id=1]
 [ext_resource path="res://Planet.tscn" type="PackedScene" id=2]
@@ -8,6 +8,8 @@
 [ext_resource path="res://art/1.jpg" type="Texture" id=6]
 [ext_resource path="res://art/4.jpg" type="Texture" id=7]
 [ext_resource path="res://art/2.jpg" type="Texture" id=8]
+[ext_resource path="res://art/addship.mp3" type="AudioStream" id=9]
+[ext_resource path="res://art/moveship.mp3" type="AudioStream" id=10]
 
 [sub_resource type="SpriteFrames" id=1]
 animations = [ {
@@ -17,15 +19,24 @@ animations = [ {
 "speed": 0.0
 } ]
 
-[node name="main" type="Node"]
+[node name="main" type="ParallaxBackground"]
 script = ExtResource( 1 )
 planet = ExtResource( 2 )
 hud = ExtResource( 3 )
 
 [node name="Background" type="AnimatedSprite" parent="."]
-position = Vector2( 575, 1013 )
-rotation = -1.5708
-scale = Vector2( 1.1, 1.1 )
+position = Vector2( 514.432, 301.324 )
+rotation = -0.000144657
+scale = Vector2( 1.03269, 1.07531 )
 frames = SubResource( 1 )
+
+[node name="AddShip" type="AudioStreamPlayer" parent="."]
+stream = ExtResource( 9 )
+volume_db = -11.718
+
+[node name="MoveShip" type="AudioStreamPlayer" parent="."]
+pause_mode = 1
+stream = ExtResource( 10 )
+volume_db = -7.768
 
 [connection signal="start_game" from="." to="." method="_on_main_start_game"]
