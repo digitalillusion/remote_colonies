@@ -61,7 +61,7 @@ makers release-html5
 
 This command will build the WASM bindings; it *requires* Rust nightly-2023-01-27 and Emscripten 3.1.21 
 
-In order succeed, `emsdk_env.sh` must be sourced and the godot template build first, as described in the gdnative export documentation above.
+In order succeed, *the godot template must be built first*, as described in the gdnative export documentation above.
 
 After generating the wasm file, it's possible to export the project as HTML5 using Godot engine.
 

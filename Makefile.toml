@@ -8,6 +8,7 @@ script = "find ./ -name '*.gdns' -exec sed -i 's|res://remote_colonies_library_d
 script = '''
 export C_INCLUDE_PATH=$EMSDK/upstream/emscripten/cache/sysroot/include
 rustup default nightly-2023-01-27
+source $EMSDK/emsdk_env.sh
 '''
 
 [tasks.debug-godot]
